@@ -25,10 +25,12 @@ export class FastApiPestRepositoryImpl implements IPestRepository {
                 d.box,
                 d.confidence,
                 d.class,
-                d.class_id
+                d.class_id,
+                d.model ?? null
             ));
+            const models = Array.isArray(data.models) ? data.models : [];
 
-            return new PestAnalysisResult(data.filename, detections);
+            return new PestAnalysisResult(data.filename, detections, models);
         } catch (error) {
             console.error('Error calling ML Service:', error);
             throw new InternalServerErrorException('Failed to analyze image with ML service');

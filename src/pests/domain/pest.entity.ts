@@ -4,6 +4,7 @@ export class PestDetection {
         public readonly confidence: number,
         public readonly className: string,
         public readonly classId: number,
+        public readonly model: string | null = null,
     ) { }
 }
 
@@ -11,5 +12,6 @@ export class PestAnalysisResult {
     constructor(
         public readonly filename: string,
         public readonly detections: PestDetection[],
+        public readonly models: string[] = [],
     ) { }
 }

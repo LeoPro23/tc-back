@@ -18,13 +18,13 @@ app.add_middleware(
 )
 
 # Initialize model
-MODEL_PATH = "best.pt"
-detector = PestDetector(MODEL_PATH)
+MODELS_DIR = os.path.join(os.path.dirname(__file__), "models")
+detector = PestDetector(MODELS_DIR)
 
 @app.on_event("startup")
 async def startup_event():
     try:
-        detector.load_model()
+        detector.load_models()
     except Exception as e:
         print(f"Error loading model: {e}")
 
@@ -38,14 +38,24 @@ async def predict(file: UploadFile = File(...)):
         image = Image.open(BytesIO(contents)).convert("RGB")
         
         detections = detector.predict(image)
+        models = detector.get_model_names()
         
-        return {"filename": file.filename, "detections": detections}
+        return {"filename": file.filename, "models": models, "detections": detections}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "model_loaded": detector.model is not None}
+    try:
+        model_names = detector.load_models()
+    except Exception:
+        model_names = detector.get_model_names()
+    return {
+        "status": "ok",
+        "model_loaded": len(model_names) > 0,
+        "model_count": len(model_names),
+        "models": model_names
+    }
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
