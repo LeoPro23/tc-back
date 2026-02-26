@@ -12,4 +12,16 @@ export class AnalyzePestUseCase {
     async execute(imageBuffer: Buffer, filename: string): Promise<PestAnalysisResult> {
         return this.pestRepository.analyzeImage(imageBuffer, filename);
     }
+
+    async executeBatch(images: Array<{ buffer: Buffer; filename: string }>): Promise<PestAnalysisResult[]> {
+        const results: PestAnalysisResult[] = [];
+
+        // Process sequentially to avoid saturating the ML service with concurrent heavy inferences.
+        for (const image of images) {
+            const result = await this.pestRepository.analyzeImage(image.buffer, image.filename);
+            results.push(result);
+        }
+
+        return results;
+    }
 }
