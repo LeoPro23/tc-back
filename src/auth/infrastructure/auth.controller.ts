@@ -12,7 +12,9 @@ import { GetProfileUseCase } from '../application/get-profile.use-case';
 import { UpdateProfileUseCase, UpdateProfileDto } from '../application/update-profile.use-case';
 import { ChangePasswordUseCase, ChangePasswordDto } from '../application/change-password.use-case';
 import { Toggle2FaUseCase } from '../application/toggle-2fa.use-case';
+import { GetDevicesUseCase } from '../application/get-devices.use-case';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import type { Request as ExpressRequest } from 'express';
 
 interface RegisterBody {
   name: string;
@@ -34,6 +36,7 @@ export class AuthController {
     private readonly updateProfileUseCase: UpdateProfileUseCase,
     private readonly changePasswordUseCase: ChangePasswordUseCase,
     private readonly toggle2FaUseCase: Toggle2FaUseCase,
+    private readonly getDevicesUseCase: GetDevicesUseCase,
   ) { }
 
   @Post('register')
@@ -42,8 +45,10 @@ export class AuthController {
   }
 
   @Post('login')
-  login(@Body() dto: LoginBody) {
-    return this.loginUseCase.execute(dto);
+  login(@Request() req: ExpressRequest, @Body() dto: LoginBody) {
+    const ipAddress = req.ip || req.socket.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+    return this.loginUseCase.execute({ ...dto, ipAddress, userAgent });
   }
 
   @Get('me')
@@ -81,11 +86,7 @@ export class AuthController {
 
   @Get('devices')
   @UseGuards(JwtAuthGuard)
-  getDevices(@Request() req: any) {
-    // Retorna dispositivos mockeados, inyectando la información del agente de usuario actual como uno de ellos
-    const userAgent = req.headers['user-agent'] || 'Unknown Browser';
-    return [
-      { id: '1', name: 'Dispositivo Actual', os: userAgent, lastActive: new Date().toISOString() }
-    ];
+  getDevices(@Request() req: Record<string, Record<string, string>>) {
+    return this.getDevicesUseCase.execute(req['user']['userId']);
   }
 }

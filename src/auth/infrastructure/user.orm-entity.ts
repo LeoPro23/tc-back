@@ -2,8 +2,10 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { UserSessionOrmEntity } from './user-session.orm-entity';
 
 @Entity({ name: 'users' })
 export class UserOrmEntity {
@@ -30,4 +32,7 @@ export class UserOrmEntity {
 
   @Column({ name: 'is_two_factor_enabled', default: false })
   isTwoFactorEnabled: boolean;
+
+  @OneToMany(() => UserSessionOrmEntity, (session) => session.user)
+  sessions: UserSessionOrmEntity[];
 }

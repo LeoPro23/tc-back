@@ -8,15 +8,19 @@ import { GetProfileUseCase } from '../application/get-profile.use-case';
 import { UpdateProfileUseCase } from '../application/update-profile.use-case';
 import { ChangePasswordUseCase } from '../application/change-password.use-case';
 import { Toggle2FaUseCase } from '../application/toggle-2fa.use-case';
+import { GetDevicesUseCase } from '../application/get-devices.use-case';
 import { UserRepositoryImpl } from './user.repository.impl';
+import { UserSessionRepositoryImpl } from './user-session.repository.impl';
 import { IUserRepository } from '../domain/user.repository.interface';
+import { IUserSessionRepository } from '../domain/user-session.repository.interface';
 import { JwtStrategy } from './jwt.strategy';
 import { AuthController } from './auth.controller';
 import { UserOrmEntity } from './user.orm-entity';
+import { UserSessionOrmEntity } from './user-session.orm-entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([UserOrmEntity]),
+    TypeOrmModule.forFeature([UserOrmEntity, UserSessionOrmEntity]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.register({
       secret: process.env.JWT_SECRET ?? 'tomatocode-secret-fallback',
@@ -31,10 +35,15 @@ import { UserOrmEntity } from './user.orm-entity';
     UpdateProfileUseCase,
     ChangePasswordUseCase,
     Toggle2FaUseCase,
+    GetDevicesUseCase,
     JwtStrategy,
     {
       provide: IUserRepository,
       useClass: UserRepositoryImpl,
+    },
+    {
+      provide: IUserSessionRepository,
+      useClass: UserSessionRepositoryImpl,
     },
   ],
   exports: [JwtModule, PassportModule],
