@@ -24,4 +24,10 @@ export class UserOrmEntity {
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
+
+  @Column({ name: 'farm_name', nullable: true, type: 'varchar' })
+  farmName: string | null;
+
+  @Column({ name: 'is_two_factor_enabled', default: false })
+  isTwoFactorEnabled: boolean;
 }

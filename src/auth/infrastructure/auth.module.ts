@@ -5,6 +5,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { RegisterUseCase } from '../application/register.use-case';
 import { LoginUseCase } from '../application/login.use-case';
 import { GetProfileUseCase } from '../application/get-profile.use-case';
+import { UpdateProfileUseCase } from '../application/update-profile.use-case';
+import { ChangePasswordUseCase } from '../application/change-password.use-case';
+import { Toggle2FaUseCase } from '../application/toggle-2fa.use-case';
 import { UserRepositoryImpl } from './user.repository.impl';
 import { IUserRepository } from '../domain/user.repository.interface';
 import { JwtStrategy } from './jwt.strategy';
@@ -25,6 +28,9 @@ import { UserOrmEntity } from './user.orm-entity';
     RegisterUseCase,
     LoginUseCase,
     GetProfileUseCase,
+    UpdateProfileUseCase,
+    ChangePasswordUseCase,
+    Toggle2FaUseCase,
     JwtStrategy,
     {
       provide: IUserRepository,
@@ -33,4 +39,4 @@ import { UserOrmEntity } from './user.orm-entity';
   ],
   exports: [JwtModule, PassportModule],
 })
-export class AuthModule {}
+export class AuthModule { }

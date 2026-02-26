@@ -10,7 +10,7 @@ export class UserRepositoryImpl implements IUserRepository {
   constructor(
     @InjectRepository(UserOrmEntity)
     private readonly repo: Repository<UserOrmEntity>,
-  ) {}
+  ) { }
 
   private toDomain(orm: UserOrmEntity): User {
     return new User(
@@ -20,6 +20,8 @@ export class UserRepositoryImpl implements IUserRepository {
       orm.name,
       orm.role,
       orm.createdAt,
+      orm.farmName,
+      orm.isTwoFactorEnabled,
     );
   }
 
@@ -47,5 +49,19 @@ export class UserRepositoryImpl implements IUserRepository {
     });
     const saved = await this.repo.save(orm);
     return this.toDomain(saved);
+  }
+
+  async update(id: string, data: Partial<User>): Promise<User> {
+    await this.repo.update(id, {
+      ...(data.email && { email: data.email }),
+      ...(data.passwordHash && { passwordHash: data.passwordHash }),
+      ...(data.name && { name: data.name }),
+      ...(data.role && { role: data.role }),
+      ...(data.farmName !== undefined && { farmName: data.farmName }),
+      ...(data.isTwoFactorEnabled !== undefined && { isTwoFactorEnabled: data.isTwoFactorEnabled }),
+    });
+    const updated = await this.findById(id);
+    if (!updated) throw new Error('User not found after update');
+    return updated;
   }
 }
