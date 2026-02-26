@@ -33,6 +33,9 @@ export class UserOrmEntity {
   @Column({ name: 'is_two_factor_enabled', default: false })
   isTwoFactorEnabled: boolean;
 
+  @Column({ name: 'two_factor_secret', type: 'varchar', nullable: true, select: false })
+  twoFactorSecret: string | null;
+
   @OneToMany(() => UserSessionOrmEntity, (session) => session.user)
   sessions: UserSessionOrmEntity[];
 }

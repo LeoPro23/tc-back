@@ -14,6 +14,12 @@ export class Toggle2FaUseCase {
             throw new Error('User not found');
         }
 
-        await this.userRepository.update(userId, { isTwoFactorEnabled: isEnabled });
+        // We only allow disabling through the toggle. Enabling requires the VerifyUseCase.
+        if (isEnabled === false) {
+            await this.userRepository.update(userId, {
+                isTwoFactorEnabled: false,
+                twoFactorSecret: null
+            });
+        }
     }
 }

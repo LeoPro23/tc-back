@@ -22,17 +22,26 @@ export class UserRepositoryImpl implements IUserRepository {
       orm.createdAt,
       orm.farmName,
       orm.isTwoFactorEnabled,
+      orm.twoFactorSecret,
     );
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    const orm = await this.repo.findOne({ where: { email } });
-    return orm ? this.toDomain(orm) : null;
+    const orm = await this.repo.findOne({
+      where: { email },
+      select: ['id', 'email', 'passwordHash', 'name', 'role', 'createdAt', 'farmName', 'isTwoFactorEnabled', 'twoFactorSecret'],
+    });
+    if (!orm) return null;
+    return this.toDomain(orm);
   }
 
   async findById(id: string): Promise<User | null> {
-    const orm = await this.repo.findOne({ where: { id } });
-    return orm ? this.toDomain(orm) : null;
+    const orm = await this.repo.findOne({
+      where: { id },
+      select: ['id', 'email', 'passwordHash', 'name', 'role', 'createdAt', 'farmName', 'isTwoFactorEnabled', 'twoFactorSecret'],
+    });
+    if (!orm) return null;
+    return this.toDomain(orm);
   }
 
   async create(data: {
@@ -59,6 +68,7 @@ export class UserRepositoryImpl implements IUserRepository {
       ...(data.role && { role: data.role }),
       ...(data.farmName !== undefined && { farmName: data.farmName }),
       ...(data.isTwoFactorEnabled !== undefined && { isTwoFactorEnabled: data.isTwoFactorEnabled }),
+      ...(data.twoFactorSecret !== undefined && { twoFactorSecret: data.twoFactorSecret }),
     });
     const updated = await this.findById(id);
     if (!updated) throw new Error('User not found after update');

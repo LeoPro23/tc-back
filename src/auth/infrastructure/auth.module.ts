@@ -8,7 +8,10 @@ import { GetProfileUseCase } from '../application/get-profile.use-case';
 import { UpdateProfileUseCase } from '../application/update-profile.use-case';
 import { ChangePasswordUseCase } from '../application/change-password.use-case';
 import { Toggle2FaUseCase } from '../application/toggle-2fa.use-case';
+import { Generate2FaSecretUseCase } from '../application/generate-2fa-secret.use-case';
+import { Verify2FaUseCase } from '../application/verify-2fa.use-case';
 import { GetDevicesUseCase } from '../application/get-devices.use-case';
+import { RevokeDeviceUseCase } from '../application/revoke-device.use-case';
 import { UserRepositoryImpl } from './user.repository.impl';
 import { UserSessionRepositoryImpl } from './user-session.repository.impl';
 import { IUserRepository } from '../domain/user.repository.interface';
@@ -35,7 +38,10 @@ import { UserSessionOrmEntity } from './user-session.orm-entity';
     UpdateProfileUseCase,
     ChangePasswordUseCase,
     Toggle2FaUseCase,
+    Generate2FaSecretUseCase,
+    Verify2FaUseCase,
     GetDevicesUseCase,
+    RevokeDeviceUseCase,
     JwtStrategy,
     {
       provide: IUserRepository,

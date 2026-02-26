@@ -6,7 +6,7 @@ export class GetProfileUseCase {
   constructor(
     @Inject(IUserRepository)
     private readonly userRepository: IUserRepository,
-  ) {}
+  ) { }
 
   async execute(userId: string) {
     const user = await this.userRepository.findById(userId);
@@ -20,6 +20,8 @@ export class GetProfileUseCase {
       name: user.name,
       role: user.role,
       createdAt: user.createdAt,
+      farmName: user.farmName,
+      isTwoFactorEnabled: user.isTwoFactorEnabled,
     };
   }
 }

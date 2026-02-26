@@ -9,6 +9,7 @@ export interface LoginDto {
   password: string;
   ipAddress?: string;
   userAgent?: string;
+  otpCode?: string;
 }
 
 @Injectable()
@@ -30,6 +31,24 @@ export class LoginUseCase {
     const passwordMatch = await bcrypt.compare(dto.password, user.passwordHash);
     if (!passwordMatch) {
       throw new UnauthorizedException('Credenciales inválidas');
+    }
+
+    if (user.isTwoFactorEnabled) {
+      if (!dto.otpCode) {
+        throw new UnauthorizedException('2FA_REQUIRED');
+      }
+
+      const speakeasy = require('speakeasy');
+      const isValid = speakeasy.totp.verify({
+        secret: user.twoFactorSecret,
+        encoding: 'base32',
+        token: dto.otpCode,
+        window: 2,
+      });
+
+      if (!isValid) {
+        throw new UnauthorizedException('El código 2FA es incorrecto o ha expirado');
+      }
     }
 
     const accessToken = this.jwtService.sign({

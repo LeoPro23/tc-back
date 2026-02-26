@@ -8,5 +8,6 @@ export class User {
     public readonly createdAt: Date,
     public readonly farmName: string | null = null,
     public readonly isTwoFactorEnabled: boolean = false,
+    public readonly twoFactorSecret: string | null = null,
   ) { }
 }
