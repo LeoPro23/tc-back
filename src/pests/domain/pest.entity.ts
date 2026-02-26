@@ -13,5 +13,7 @@ export class PestAnalysisResult {
         public readonly filename: string,
         public readonly detections: PestDetection[],
         public readonly models: string[] = [],
+        public readonly verified: boolean = true,
+        public readonly verificationReason: string | null = null,
     ) { }
 }

@@ -20,14 +20,16 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "start:ml": "cd ml-service && python -m uvicorn main:app --reload --port 8000"
+    "start:ml": "cd ml-service && python -m uvicorn main:app --reload --port 8001"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
     "axios": "^1.13.5",
+    "dotenv": "^17.3.1",
     "form-data": "^4.0.5",
+    "openai": "^6.25.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },

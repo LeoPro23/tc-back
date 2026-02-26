@@ -9,19 +9,24 @@ export class PestController {
     @Post('analyze')
     @UseInterceptors(FileInterceptor('file'))
     async analyze(@UploadedFile() file: Express.Multer.File) {
-        return this.analyzePestUseCase.execute(file.buffer, file.originalname);
+        if (!file || !file.mimetype?.startsWith('image/')) {
+            throw new BadRequestException('Se requiere un archivo de imagen válido');
+        }
+
+        return this.analyzePestUseCase.execute(file.buffer, file.originalname, file.mimetype);
     }
 
     @Post('analyze/batch')
     @UseInterceptors(FilesInterceptor('files'))
     async analyzeBatch(@UploadedFiles() files: Express.Multer.File[]) {
         if (!files || files.length === 0) {
-            throw new BadRequestException('At least one image file is required');
+            throw new BadRequestException('Se requiere al menos una imagen');
         }
 
         const images = files.map((file) => ({
             buffer: file.buffer,
             filename: file.originalname,
+            mimeType: file.mimetype,
         }));
 
         const results = await this.analyzePestUseCase.executeBatch(images);

@@ -6,7 +6,7 @@ import { IPestRepository } from '../domain/pest.repository.interface';
 
 @Injectable()
 export class FastApiPestRepositoryImpl implements IPestRepository {
-    private readonly fastApiUrl = 'http://127.0.0.1:8000'; // Configuration would be better
+    private readonly fastApiUrl = process.env.ML_SERVICE_URL ?? 'http://127.0.0.1:8001';
 
     async analyzeImage(imageBuffer: Buffer, filename: string): Promise<PestAnalysisResult> {
         const formData = new FormData();
