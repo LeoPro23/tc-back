@@ -19,7 +19,12 @@ export class AnalyzePestUseCase {
             throw new BadRequestException(`Imagen rechazada por verificación: ${decision.reason}`);
         }
 
-        return this.pestRepository.analyzeImage(imageBuffer, filename);
+        const result = await this.pestRepository.analyzeImage(imageBuffer, filename);
+        if (!result.verified) {
+            throw new BadRequestException(`Imagen rechazada por análisis: ${result.verificationReason}`);
+        }
+
+        return result;
     }
 
     async executeBatch(

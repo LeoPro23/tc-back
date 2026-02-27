@@ -2,7 +2,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from model import PestDetector
 from io import BytesIO
-from PIL import Image
+from PIL import Image, ImageStat
 import os
 import uvicorn
 
@@ -36,11 +36,57 @@ async def predict(file: UploadFile = File(...)):
     try:
         contents = await file.read()
         image = Image.open(BytesIO(contents)).convert("RGB")
+        models = detector.get_model_names()
+
+        # 1. Resolución de Imagen
+        if image.width < 512 or image.height < 512:
+            return {
+                "filename": file.filename, 
+                "models": models, 
+                "detections": [], 
+                "verified": False, 
+                "verification_reason": f"Resolución insuficiente ({image.width}x{image.height}). Mínimo requerido: 512x512."
+            }
+
+        # 2. Nivel de Iluminación
+        stat = ImageStat.Stat(image.convert("L"))
+        avg_pixel_value = stat.mean[0]
+        if avg_pixel_value < 20:
+            return {
+                "filename": file.filename,
+                "models": models,
+                "detections": [],
+                "verified": False,
+                "verification_reason": "Imagen demasiado oscura. Imposible distinguir textura/contornos."
+            }
+        elif avg_pixel_value > 240:
+            return {
+                "filename": file.filename,
+                "models": models,
+                "detections": [],
+                "verified": False,
+                "verification_reason": "Imagen quemada o sobreexpuesta. Imposible distinguir textura/contornos."
+            }
         
         detections = detector.predict(image)
-        models = detector.get_model_names()
         
-        return {"filename": file.filename, "models": models, "detections": detections}
+        # 5. Densidad de Población y Evidencia
+        if len(detections) > 100:
+            return {
+                "filename": file.filename,
+                "models": models,
+                "detections": detections,
+                "verified": False,
+                "verification_reason": f"Densidad anormalmente alta ({len(detections)} objetos detectados). Posible ruido."
+            }
+        
+        return {
+            "filename": file.filename, 
+            "models": models, 
+            "detections": detections,
+            "verified": True,
+            "verification_reason": None if len(detections) > 0 else "Sin evidencia suficiente"
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -30,7 +30,13 @@ export class FastApiPestRepositoryImpl implements IPestRepository {
             ));
             const models = Array.isArray(data.models) ? data.models : [];
 
-            return new PestAnalysisResult(data.filename, detections, models);
+            return new PestAnalysisResult(
+                data.filename, 
+                detections, 
+                models,
+                data.verified ?? true,
+                data.verification_reason ?? null
+            );
         } catch (error) {
             console.error('Error calling ML Service:', error);
             throw new InternalServerErrorException('Failed to analyze image with ML service');

@@ -64,6 +64,17 @@ class PestDetector:
                     cls = int(box.cls[0])
                     class_name = result.names[cls]
 
+                    # 3. Ubicación: Validar que el bounding box esté dentro de la imagen
+                    width, height = image.size
+                    if x1 < 0 or y1 < 0 or x2 > width or y2 > height:
+                        continue # descartar por estar fuera de rango
+
+                    # 4. Escala del Objeto: Descartar bounding boxes muy pequeños o que cubran casi toda la imagen
+                    area = (x2 - x1) * (y2 - y1)
+                    image_area = width * height
+                    if area < 100 or area > (image_area * 0.8):
+                        continue # descartar por ser posible falso positivo o recorte
+
                     detections.append({
                         "box": [x1, y1, x2, y2],
                         "confidence": conf,
