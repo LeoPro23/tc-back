@@ -39,6 +39,9 @@ export class ImageVerificationService {
                     {
                         role: 'system',
                         content:
+                            // VALIDACIÓN DE NEGOCIO Y DOMINIO: a) Etiqueta de Clase (Contexto)
+                            // La imagen debe contener evidencia visual compatible con inspección de tomate (hoja, tallo, fruto).
+                            // Si el pre-clasificador neuronal descarta el contexto, se rechaza y no se ejecuta la detección YOLO.
                             'Eres un verificador agrícola de imágenes. Decide si la imagen es apta para análisis de plagas en tomate. ' +
                             'Acepta únicamente hojas/plantas/trampas o escenas de inspección relacionadas con tomate, incluyendo ' +
                             'textura de hoja en primer plano, galerías serpenteantes/minas, mosca blanca, minadores y plagas similares. ' +
