@@ -39,13 +39,14 @@ async def predict(file: UploadFile = File(...)):
         models = detector.get_model_names()
 
         # 1. Resolución de Imagen
-        if image.width < 512 or image.height < 512:
+        # if image.width < 512 or image.height < 512:
+        if image.width < 256 or image.height < 256:
             return {
                 "filename": file.filename, 
                 "models": models, 
                 "detections": [], 
                 "verified": False, 
-                "verification_reason": f"Resolución insuficiente ({image.width}x{image.height}). Mínimo requerido: 512x512."
+                "verification_reason": f"Resolución insuficiente ({image.width}x{image.height}). Mínimo requerido: 256x256."
             }
 
         # 2. Nivel de Iluminación
