@@ -29,7 +29,6 @@ export class PestController {
             mimeType: file.mimetype,
         }));
 
-        const results = await this.analyzePestUseCase.executeBatch(images);
-        return { results };
+        return this.analyzePestUseCase.executeBatch(images);
     }
 }

@@ -8,6 +8,25 @@ export class PestDetection {
     ) { }
 }
 
+export interface AgronomicRecommendation {
+    product: string;
+    dose: string;
+    method: string;
+}
+
+export interface PerImageInterpretation {
+    filename: string;
+    targetPest: string;
+    recipe: AgronomicRecommendation;
+    biosecurityStatus: string;
+    biosecurityProtocol: string;
+}
+
+export interface BatchInterpretation {
+    generalSummary: string;
+    perImage: PerImageInterpretation[];
+}
+
 export class PestAnalysisResult {
     constructor(
         public readonly filename: string,
