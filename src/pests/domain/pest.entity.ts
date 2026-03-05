@@ -17,6 +17,7 @@ export interface AgronomicRecommendation {
 export interface PerImageInterpretation {
     filename: string;
     targetPest: string;
+    imageRecommendation: string;
     recipe: AgronomicRecommendation;
     biosecurityStatus: string;
     biosecurityProtocol: string;
@@ -24,6 +25,10 @@ export interface PerImageInterpretation {
 
 export interface BatchInterpretation {
     generalSummary: string;
+    generalRecommendation: string;
+    generalProduct: string;
+    generalOperativeGuide: string;
+    generalBiosecurityProtocol: string;
     perImage: PerImageInterpretation[];
 }
 

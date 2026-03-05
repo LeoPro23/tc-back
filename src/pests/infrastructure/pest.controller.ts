@@ -1,6 +1,7 @@
-import { BadRequestException, Controller, Post, UploadedFile, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Controller, Post, UploadedFile, UploadedFiles, UseInterceptors, Req, UseGuards, Body } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { AnalyzePestUseCase } from '../application/analyze-pest.use-case';
+import { JwtAuthGuard } from '../../auth/infrastructure/jwt-auth.guard';
 
 @Controller('pests')
 export class PestController {
@@ -16,9 +17,14 @@ export class PestController {
         return this.analyzePestUseCase.execute(file.buffer, file.originalname, file.mimetype);
     }
 
+    @UseGuards(JwtAuthGuard)
     @Post('analyze/batch')
     @UseInterceptors(FilesInterceptor('files'))
-    async analyzeBatch(@UploadedFiles() files: Express.Multer.File[]) {
+    async analyzeBatch(
+        @UploadedFiles() files: Express.Multer.File[],
+        @Body('fieldCampaignId') fieldCampaignId: string,
+        @Req() req: any
+    ) {
         if (!files || files.length === 0) {
             throw new BadRequestException('Se requiere al menos una imagen');
         }
@@ -29,6 +35,14 @@ export class PestController {
             mimeType: file.mimetype,
         }));
 
-        return this.analyzePestUseCase.executeBatch(images);
+        const userId = req.user?.userId || req.user?.sub;
+        if (!userId) {
+            throw new BadRequestException('Usuario no identificado o sin sesion activa');
+        }
+        if (!fieldCampaignId) {
+            throw new BadRequestException('Se requiere el ID de inscripción de Campo en la Campaña (fieldCampaignId)');
+        }
+
+        return this.analyzePestUseCase.executeBatch(images, userId, fieldCampaignId);
     }
 }

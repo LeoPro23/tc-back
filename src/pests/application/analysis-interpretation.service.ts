@@ -11,6 +11,8 @@ interface RawPerImageInterpretation {
     filename?: unknown;
     target_pest?: unknown;
     targetPest?: unknown;
+    image_recommendation?: unknown;
+    imageRecommendation?: unknown;
     recipe?: {
         product?: unknown;
         dose?: unknown;
@@ -20,6 +22,8 @@ interface RawPerImageInterpretation {
         status?: unknown;
         protocol?: unknown;
     };
+    biosecurityStatus?: unknown;
+    biosecurityProtocol?: unknown;
 }
 
 @Injectable()
@@ -35,6 +39,10 @@ export class AnalysisInterpretationService {
         if (results.length === 0) {
             return {
                 generalSummary: 'No se recibieron imágenes para interpretar.',
+                generalRecommendation: 'N/A',
+                generalProduct: 'N/A',
+                generalOperativeGuide: 'N/A',
+                generalBiosecurityProtocol: 'N/A',
                 perImage: [],
             };
         }
@@ -50,34 +58,40 @@ export class AnalysisInterpretationService {
             const response = await this.getOpenRouterClient().chat.completions.create({
                 model: this.openRouterInterpretationModel,
                 temperature: 0.2,
-                max_tokens: 1200,
+                max_tokens: 3000,
                 response_format: { type: 'json_object' },
                 messages: [
                     {
                         role: 'system',
                         content:
                             'Eres un agrónomo especializado en plagas de tomate. ' +
-                            'Recibirás resultados estructurados de detección (ya procesados) y debes devolver ' +
-                            'una interpretación ejecutiva para UI de monitoreo agrícola. ' +
+                            'Recibirás resultados estructurados de detección (ya procesados) de un lote y debes devolver ' +
+                            'una interpretación ejecutiva bimodal. ' +
                             'Responde SOLO JSON estricto con este esquema exacto:\n' +
                             '{\n' +
-                            '  "general_summary": string,\n' +
+                            '  "general_summary": "string",\n' +
+                            '  "general_recommendation": "string",\n' +
+                            '  "general_product": "string",\n' +
+                            '  "general_operative_guide": "string",\n' +
+                            '  "general_biosecurity_protocol": "string",\n' +
                             '  "per_image": [\n' +
                             '    {\n' +
-                            '      "filename": string,\n' +
-                            '      "target_pest": string,\n' +
-                            '      "recipe": { "product": string, "dose": string, "method": string },\n' +
-                            '      "biosecurity": { "status": string, "protocol": string }\n' +
+                            '      "filename": "string",\n' +
+                            '      "target_pest": "string",\n' +
+                            '      "image_recommendation": "string",\n' +
+                            '      "recipe": { "product": "string", "dose": "string", "method": "string" },\n' +
+                            '      "biosecurity": { "status": "string", "protocol": "string" }\n' +
                             '    }\n' +
                             '  ]\n' +
                             '}\n' +
-                            'El texto debe estar en español técnico claro. ' +
-                            'Si la imagen está rechazada por verificación, usa estado RECHAZADA y receta no aplicable.',
+                            'El texto debe estar en español técnico claro y aplicable a la vida real (no mocks). ' +
+                            'Si la imagen está rechazada por verificación (verificada=false), usa estado RECHAZADA y emite que no aplica receta.\n' +
+                            'Provee un resumen general considerando TODAS las fotos del lote, así como instrucciones operativas para todo el campo.',
                     },
                     {
                         role: 'user',
                         content:
-                            'Interpreta este lote para interfaz agrícola:\n' +
+                            'Interpreta este lote de imágenes para mi interfaz agrícola:\n' +
                             JSON.stringify(this.toPromptPayload(results)),
                     },
                 ],
@@ -111,7 +125,7 @@ export class AnalysisInterpretationService {
     }
 
     private mergeWithFallback(
-        parsed: { generalSummary: string; perImage: RawPerImageInterpretation[] },
+        parsed: BatchInterpretation & { perImage: Partial<PerImageInterpretation>[] },
         results: PestAnalysisResult[],
     ): BatchInterpretation {
         const fallback = this.buildFallbackInterpretation(results);
@@ -130,23 +144,22 @@ export class AnalysisInterpretationService {
             const byIndex = parsed.perImage[index];
             const candidate = byFilename ?? byIndex;
 
-            if (!candidate) {
-                return base;
-            }
+            const candidateRaw = candidate as RawPerImageInterpretation;
 
             return {
                 filename: result.filename,
-                targetPest: this.asText(candidate.target_pest ?? candidate.targetPest, base.targetPest),
+                targetPest: this.asText(candidateRaw.target_pest ?? candidateRaw.targetPest, base.targetPest),
+                imageRecommendation: this.asText(candidateRaw.image_recommendation ?? candidateRaw.imageRecommendation, base.imageRecommendation),
                 recipe: {
-                    product: this.asText(candidate.recipe?.product, base.recipe.product),
-                    dose: this.asText(candidate.recipe?.dose, base.recipe.dose),
-                    method: this.asText(candidate.recipe?.method, base.recipe.method),
+                    product: this.asText(candidateRaw.recipe?.product, base.recipe.product),
+                    dose: this.asText(candidateRaw.recipe?.dose, base.recipe.dose),
+                    method: this.asText(candidateRaw.recipe?.method, base.recipe.method),
                 },
                 biosecurityStatus: this.normalizeStatus(
-                    this.asText(candidate.biosecurity?.status, base.biosecurityStatus),
+                    this.asText(candidateRaw.biosecurity?.status, base.biosecurityStatus),
                 ),
                 biosecurityProtocol: this.asText(
-                    candidate.biosecurity?.protocol,
+                    candidateRaw.biosecurity?.protocol,
                     base.biosecurityProtocol,
                 ),
             } satisfies PerImageInterpretation;
@@ -154,11 +167,15 @@ export class AnalysisInterpretationService {
 
         return {
             generalSummary: this.asText(parsed.generalSummary, fallback.generalSummary),
+            generalRecommendation: this.asText(parsed.generalRecommendation, fallback.generalRecommendation),
+            generalProduct: this.asText(parsed.generalProduct, fallback.generalProduct),
+            generalOperativeGuide: this.asText(parsed.generalOperativeGuide, fallback.generalOperativeGuide),
+            generalBiosecurityProtocol: this.asText(parsed.generalBiosecurityProtocol, fallback.generalBiosecurityProtocol),
             perImage: mergedPerImage,
         };
     }
 
-    private parseRawResponse(rawContent: unknown): { generalSummary: string; perImage: RawPerImageInterpretation[] } {
+    private parseRawResponse(rawContent: unknown): BatchInterpretation & { perImage: Partial<PerImageInterpretation>[] } {
         if (typeof rawContent !== 'string' || rawContent.trim().length === 0) {
             throw new Error('Empty interpretation response');
         }
@@ -183,16 +200,24 @@ export class AnalysisInterpretationService {
             parsed.general_summary ?? parsed.generalSummary,
             'Se completó el análisis del lote.',
         );
+        const generalRecommendation = this.asText(parsed.general_recommendation ?? parsed.generalRecommendation, 'Aplicar medidas preventivas básicas.');
+        const generalProduct = this.asText(parsed.general_product ?? parsed.generalProduct, 'Preventivo genérico');
+        const generalOperativeGuide = this.asText(parsed.general_operative_guide ?? parsed.generalOperativeGuide, 'Monitorear cultivo de forma regular.');
+        const generalBiosecurityProtocol = this.asText(parsed.general_biosecurity_protocol ?? parsed.generalBiosecurityProtocol, 'Mantener protocolos estándar de bioseguridad.');
 
         const perImageRaw = Array.isArray(parsed.per_image)
-            ? (parsed.per_image as RawPerImageInterpretation[])
+            ? (parsed.per_image as any as RawPerImageInterpretation[])
             : Array.isArray(parsed.perImage)
-                ? (parsed.perImage as RawPerImageInterpretation[])
+                ? (parsed.perImage as any as RawPerImageInterpretation[])
                 : [];
 
         return {
             generalSummary,
-            perImage: perImageRaw,
+            generalRecommendation,
+            generalProduct,
+            generalOperativeGuide,
+            generalBiosecurityProtocol,
+            perImage: perImageRaw as any as PerImageInterpretation[],
         };
     }
 
@@ -204,12 +229,15 @@ export class AnalysisInterpretationService {
 
         const generalSummary = rejectedCount > 0
             ? `Lote procesado: ${positiveCount} imágenes con hallazgos y ${rejectedCount} rechazadas por verificación.`
-            : `Lote procesado: ${positiveCount} imágenes con hallazgos y ${
-                results.length - positiveCount
+            : `Lote procesado: ${positiveCount} imágenes con hallazgos y ${results.length - positiveCount
             } sin detecciones de plaga.`;
 
         return {
             generalSummary,
+            generalRecommendation: 'Evaluación rápida de lote completada por motor ML.',
+            generalProduct: 'No aplica',
+            generalOperativeGuide: 'Seguir lineamientos preestablecidos por equipo agrónomo local.',
+            generalBiosecurityProtocol: 'Aplicar normas de la finca. Precaución preventiva ante cualquier síntoma visual.',
             perImage: results.map((result) => this.buildFallbackPerImage(result)),
         };
     }
@@ -219,6 +247,7 @@ export class AnalysisInterpretationService {
             return {
                 filename: result.filename,
                 targetPest: 'No aplicable',
+                imageRecommendation: 'La imagen fue rechazada por falta de foco agrícola.',
                 recipe: {
                     product: 'No aplica',
                     dose: 'No aplica',
@@ -237,6 +266,7 @@ export class AnalysisInterpretationService {
             return {
                 filename: result.filename,
                 targetPest: 'Sin plaga detectada',
+                imageRecommendation: 'Ningún patógeno visible. Cultivo sano.',
                 recipe: {
                     product: 'Monitoreo preventivo',
                     dose: 'No aplica',
@@ -259,6 +289,7 @@ export class AnalysisInterpretationService {
         return {
             filename: result.filename,
             targetPest: topDetection.className,
+            imageRecommendation: `Peligro detectado: ${topDetection.className} en imagen. Acción rápida sugerida.`,
             recipe: {
                 product: `Tratamiento focal para ${topDetection.className}`,
                 dose: 'Aplicar según etiqueta técnica del producto seleccionado',
