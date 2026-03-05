@@ -35,7 +35,10 @@ export class AnalysisInterpretationService {
         process.env.OPENROUTER_INTERPRETATION_MODEL ?? 'openai/gpt-4o-mini';
     private openRouterClient: OpenAI | null = null;
 
-    async interpretBatch(results: PestAnalysisResult[]): Promise<BatchInterpretation> {
+    async interpretBatch(
+        results: PestAnalysisResult[],
+        agronomicContext?: { phenologicalState: string | null; soilQuality: string | null; currentClimate: string | null },
+    ): Promise<BatchInterpretation> {
         if (results.length === 0) {
             return {
                 generalSummary: 'No se recibieron imágenes para interpretar.',
@@ -92,7 +95,12 @@ export class AnalysisInterpretationService {
                         role: 'user',
                         content:
                             'Interpreta este lote de imágenes para mi interfaz agrícola:\n' +
-                            JSON.stringify(this.toPromptPayload(results)),
+                            JSON.stringify(this.toPromptPayload(results)) +
+                            (agronomicContext ? '\n\nContexto agronómico del lote proporcionado por el usuario:\n' +
+                                (agronomicContext.phenologicalState ? `- Estado fenológico actual: ${agronomicContext.phenologicalState}\n` : '') +
+                                (agronomicContext.soilQuality ? `- Calidad del suelo: ${agronomicContext.soilQuality}\n` : '') +
+                                (agronomicContext.currentClimate ? `- Clima actual: ${agronomicContext.currentClimate}\n` : '') +
+                                'Utiliza este contexto para ajustar las recomendaciones, productos y guía operativa.' : ''),
                     },
                 ],
             });

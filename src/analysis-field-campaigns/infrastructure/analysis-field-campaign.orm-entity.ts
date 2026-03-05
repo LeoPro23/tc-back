@@ -43,6 +43,15 @@ export class AnalysisFieldCampaignOrmEntity {
     @Column({ name: 'protocolo_bioseguridad', type: 'text', nullable: true })
     biosecurityProtocol: string | null;
 
+    @Column({ name: 'estado_fenologico', type: 'varchar', nullable: true })
+    phenologicalState: string | null;
+
+    @Column({ name: 'calidad_suelo', type: 'text', nullable: true })
+    soilQuality: string | null;
+
+    @Column({ name: 'clima_actual', type: 'text', nullable: true })
+    currentClimate: string | null;
+
     @OneToMany(() => AttachedImageOrmEntity, (image) => image.analysis)
     attachedImages: AttachedImageOrmEntity[];
 

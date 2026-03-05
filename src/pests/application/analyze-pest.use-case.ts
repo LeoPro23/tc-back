@@ -44,7 +44,8 @@ export class AnalyzePestUseCase {
     async executeBatch(
         images: Array<{ buffer: Buffer; filename: string; mimeType: string }>,
         userId: string,
-        fieldCampaignId: string
+        fieldCampaignId: string,
+        agronomicContext?: { phenologicalState: string | null; soilQuality: string | null; currentClimate: string | null },
     ): Promise<{ results: PestAnalysisResult[]; interpretation: BatchInterpretation }> {
         const results: PestAnalysisResult[] = [];
         const validImagesForMinio: { buffer: Buffer; filename: string; mimeType: string, resultTemp: PestAnalysisResult }[] = [];
@@ -66,7 +67,7 @@ export class AnalyzePestUseCase {
         }
 
         // 2. Obtener Interpretación General del LLM
-        const interpretation = await this.analysisInterpretationService.interpretBatch(results);
+        const interpretation = await this.analysisInterpretationService.interpretBatch(results, agronomicContext);
 
         // 3. Efectuar Transacción de Guardado BDD + Subida Minio
         try {
@@ -96,6 +97,9 @@ export class AnalyzePestUseCase {
                     recommendedProduct: interpretation.generalProduct,
                     operativeGuide: interpretation.generalOperativeGuide,
                     biosecurityProtocol: interpretation.generalBiosecurityProtocol,
+                    phenologicalState: agronomicContext?.phenologicalState ?? null,
+                    soilQuality: agronomicContext?.soilQuality ?? null,
+                    currentClimate: agronomicContext?.currentClimate ?? null,
                 });
                 await manager.save(analysisLog);
 

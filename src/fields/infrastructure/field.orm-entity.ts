@@ -20,6 +20,9 @@ export class FieldOrmEntity {
     @Column({ name: 'nombre_campo' })
     name: string;
 
+    @Column({ name: 'tipo_riego', nullable: true, type: 'varchar' })
+    irrigationType: string | null;
+
     @Column({ name: 'ubicacion_geografica', nullable: true, type: 'varchar' })
     location: string | null;
 

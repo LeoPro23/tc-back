@@ -23,6 +23,9 @@ export class PestController {
     async analyzeBatch(
         @UploadedFiles() files: Express.Multer.File[],
         @Body('fieldCampaignId') fieldCampaignId: string,
+        @Body('phenologicalState') phenologicalState: string,
+        @Body('soilQuality') soilQuality: string,
+        @Body('currentClimate') currentClimate: string,
         @Req() req: any
     ) {
         if (!files || files.length === 0) {
@@ -43,6 +46,12 @@ export class PestController {
             throw new BadRequestException('Se requiere el ID de inscripción de Campo en la Campaña (fieldCampaignId)');
         }
 
-        return this.analyzePestUseCase.executeBatch(images, userId, fieldCampaignId);
+        const agronomicContext = {
+            phenologicalState: phenologicalState || null,
+            soilQuality: soilQuality || null,
+            currentClimate: currentClimate || null,
+        };
+
+        return this.analyzePestUseCase.executeBatch(images, userId, fieldCampaignId, agronomicContext);
     }
 }
