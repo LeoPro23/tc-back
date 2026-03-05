@@ -9,6 +9,7 @@ import { BatchInterpretation, PestAnalysisResult } from '../domain/pest.entity';
 import { ImageVerificationService } from './image-verification.service';
 import { AnalysisInterpretationService } from './analysis-interpretation.service';
 import { MinioService } from '../../storage/infrastructure/minio.service';
+import { NotificationService } from '../../notifications/application/notification.service';
 import { EntityManager } from 'typeorm';
 import { CampaignOrmEntity } from '../../campaigns/infrastructure/campaign.orm-entity';
 import { FieldOrmEntity } from '../../fields/infrastructure/field.orm-entity';
@@ -30,7 +31,8 @@ export class AnalyzePestUseCase {
     private readonly analysisInterpretationService: AnalysisInterpretationService,
     private readonly minioService: MinioService,
     private readonly entityManager: EntityManager,
-  ) {}
+    private readonly notificationService: NotificationService,
+  ) { }
 
   async execute(
     imageBuffer: Buffer,
@@ -119,8 +121,10 @@ export class AnalyzePestUseCase {
       );
 
     // 3. Efectuar Transacción de Guardado BDD + Subida Minio
+    let createdAnalysisId: string | undefined;
+
     try {
-      await this.entityManager.transaction(async (manager) => {
+      createdAnalysisId = await this.entityManager.transaction(async (manager) => {
         const user = await manager.findOne(UserOrmEntity, {
           where: { id: userId },
         });
@@ -241,10 +245,39 @@ export class AnalyzePestUseCase {
             await manager.save(resultModelLog);
           }
         }
+
+        return analysisLog.id;
       });
+      // El scope de la TBL en manager ha terminado exitosamente (y la IA ha respondido)
       this.logger.log(
         `Análisis guardado exitosamente: ${results.length} imgs para user ${userId}`,
       );
+
+      // Dispatch WhatsApp Webhook Async (UNA SOLA VEZ POR TODO EL LOTE YA FINALIZADO)
+      if (createdAnalysisId) {
+        try {
+          const fullUser = await this.entityManager.findOne(UserOrmEntity, { where: { id: userId } });
+          if (fullUser && fullUser.phoneCountry && fullUser.phoneNumber) {
+            const fieldRecord = await this.entityManager.findOne(FieldCampaignOrmEntity, {
+              where: { id: fieldCampaignId }, relations: ['field']
+            });
+            const frontUrl = process.env.ORIGIN_URL || 'http://localhost:3000';
+
+            let msg = `🔬 *TomateCode AI Analysis*\nLote Analizado: ${fieldRecord?.field?.name || 'Desconocido'}\n\n`;
+            msg += `*Resumen General:*\n${interpretation.generalSummary}\n\n`;
+            msg += `*Puedes ver más detalles en:*\n${frontUrl}/scan-history/${createdAnalysisId}`;
+
+            this.notificationService.notifyWhatsapp(
+              fullUser.phoneCountry,
+              fullUser.phoneNumber,
+              msg
+            ).catch((err) => this.logger.error("Async Whatsapp error", err.message));
+          }
+        } catch (err) {
+          this.logger.error("Error disparando Webhook Wazend post-guardado", err);
+        }
+      }
+
     } catch (dbErr) {
       this.logger.error(`Error guardando transaccional: ${dbErr}`);
       throw new BadRequestException(

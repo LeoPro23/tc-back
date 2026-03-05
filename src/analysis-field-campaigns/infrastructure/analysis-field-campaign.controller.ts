@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, Req, Param } from '@nestjs/common';
 import { AnalysisFieldCampaignService } from '../application/analysis-field-campaign.service';
 import { JwtAuthGuard } from '../../auth/infrastructure/jwt-auth.guard';
 
@@ -35,5 +35,10 @@ export class AnalysisFieldCampaignController {
       startDate,
       endDate,
     );
+  }
+
+  @Get(':id')
+  async getById(@Req() req: any, @Param('id') id: string) {
+    return await this.analysisService.getById(req.user.userId, id);
   }
 }

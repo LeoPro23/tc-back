@@ -7,9 +7,10 @@ import { StorageModule } from '../../storage/infrastructure/storage.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { FastApiPestRepositoryImpl } from './fastapi-pest.repository.impl';
 import { IPestRepository } from '../domain/pest.repository.interface';
+import { NotificationModule } from '../../notifications/infrastructure/notification.module';
 
 @Module({
-  imports: [StorageModule, TypeOrmModule.forFeature([])],
+  imports: [StorageModule, TypeOrmModule.forFeature([]), NotificationModule],
   controllers: [PestController],
   providers: [
     AnalyzePestUseCase,
@@ -21,4 +22,4 @@ import { IPestRepository } from '../domain/pest.repository.interface';
     },
   ],
 })
-export class PestModule {}
+export class PestModule { }

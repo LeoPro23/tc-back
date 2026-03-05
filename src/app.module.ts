@@ -12,6 +12,7 @@ import { AttachedImageModule } from './attached-images/infrastructure/attached-i
 import { ModelModule } from './models/infrastructure/model.module';
 import { ModelResultModule } from './model-results/infrastructure/model-result.module';
 import { StorageModule } from './storage/infrastructure/storage.module';
+import { NotificationModule } from './notifications/infrastructure/notification.module';
 
 @Module({
   imports: [
@@ -26,8 +27,9 @@ import { StorageModule } from './storage/infrastructure/storage.module';
     AttachedImageModule,
     ModelModule,
     ModelResultModule,
+    NotificationModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }

@@ -52,4 +52,23 @@ export class AnalysisFieldCampaignService {
 
     return await query.getMany();
   }
+
+  async getById(userId: string, id: string) {
+    const analysis = await this.analysisRepository
+        .createQueryBuilder('analysis')
+        .innerJoinAndSelect('analysis.fieldCampaign', 'fieldCampaign')
+        .innerJoinAndSelect('fieldCampaign.campaign', 'campaign')
+        .innerJoinAndSelect('fieldCampaign.field', 'field')
+        .leftJoinAndSelect('analysis.attachedImages', 'attachedImages')
+        .leftJoinAndSelect('attachedImages.modelResults', 'modelResults')
+        .where('campaign.user.id = :userId', { userId })
+        .andWhere('analysis.id = :id', { id })
+        .getOne();
+
+    if (!analysis) {
+        throw new BadRequestException('Analysis not found.');
+    }
+    
+    return analysis;
+  }
 }
