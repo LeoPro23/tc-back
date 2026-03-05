@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { MinioService } from './minio.service';
 
 @Module({
-    providers: [MinioService],
-    exports: [MinioService],
+  providers: [MinioService],
+  exports: [MinioService],
 })
-export class StorageModule { }
+export class StorageModule {}

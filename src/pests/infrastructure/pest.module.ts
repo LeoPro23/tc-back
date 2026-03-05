@@ -9,16 +9,16 @@ import { FastApiPestRepositoryImpl } from './fastapi-pest.repository.impl';
 import { IPestRepository } from '../domain/pest.repository.interface';
 
 @Module({
-    imports: [StorageModule, TypeOrmModule.forFeature([])],
-    controllers: [PestController],
-    providers: [
-        AnalyzePestUseCase,
-        ImageVerificationService,
-        AnalysisInterpretationService,
-        {
-            provide: IPestRepository,
-            useClass: FastApiPestRepositoryImpl,
-        },
-    ],
+  imports: [StorageModule, TypeOrmModule.forFeature([])],
+  controllers: [PestController],
+  providers: [
+    AnalyzePestUseCase,
+    ImageVerificationService,
+    AnalysisInterpretationService,
+    {
+      provide: IPestRepository,
+      useClass: FastApiPestRepositoryImpl,
+    },
+  ],
 })
-export class PestModule { }
+export class PestModule {}

@@ -9,5 +9,7 @@ export class User {
     public readonly farmName: string | null = null,
     public readonly isTwoFactorEnabled: boolean = false,
     public readonly twoFactorSecret: string | null = null,
-  ) { }
+    public readonly phoneCountry: string | null = null,
+    public readonly phoneNumber: string | null = null,
+  ) {}
 }

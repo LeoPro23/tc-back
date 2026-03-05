@@ -11,8 +11,14 @@ import {
 import { RegisterUseCase } from '../application/register.use-case';
 import { LoginUseCase } from '../application/login.use-case';
 import { GetProfileUseCase } from '../application/get-profile.use-case';
-import { UpdateProfileUseCase, UpdateProfileDto } from '../application/update-profile.use-case';
-import { ChangePasswordUseCase, ChangePasswordDto } from '../application/change-password.use-case';
+import {
+  UpdateProfileUseCase,
+  UpdateProfileDto,
+} from '../application/update-profile.use-case';
+import {
+  ChangePasswordUseCase,
+  ChangePasswordDto,
+} from '../application/change-password.use-case';
 import { Toggle2FaUseCase } from '../application/toggle-2fa.use-case';
 import { Generate2FaSecretUseCase } from '../application/generate-2fa-secret.use-case';
 import { Verify2FaUseCase } from '../application/verify-2fa.use-case';
@@ -45,7 +51,7 @@ export class AuthController {
     private readonly verify2FaUseCase: Verify2FaUseCase,
     private readonly getDevicesUseCase: GetDevicesUseCase,
     private readonly revokeDeviceUseCase: RevokeDeviceUseCase,
-  ) { }
+  ) {}
 
   @Post('register')
   register(@Body() dto: RegisterBody) {

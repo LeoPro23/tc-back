@@ -10,7 +10,7 @@ export class UserRepositoryImpl implements IUserRepository {
   constructor(
     @InjectRepository(UserOrmEntity)
     private readonly repo: Repository<UserOrmEntity>,
-  ) { }
+  ) {}
 
   private toDomain(orm: UserOrmEntity): User {
     return new User(
@@ -23,13 +23,27 @@ export class UserRepositoryImpl implements IUserRepository {
       orm.farmName,
       orm.isTwoFactorEnabled,
       orm.twoFactorSecret,
+      orm.phoneCountry,
+      orm.phoneNumber,
     );
   }
 
   async findByEmail(email: string): Promise<User | null> {
     const orm = await this.repo.findOne({
       where: { email },
-      select: ['id', 'email', 'passwordHash', 'name', 'role', 'createdAt', 'farmName', 'isTwoFactorEnabled', 'twoFactorSecret'],
+      select: [
+        'id',
+        'email',
+        'passwordHash',
+        'name',
+        'role',
+        'createdAt',
+        'farmName',
+        'isTwoFactorEnabled',
+        'twoFactorSecret',
+        'phoneCountry',
+        'phoneNumber',
+      ],
     });
     if (!orm) return null;
     return this.toDomain(orm);
@@ -38,7 +52,19 @@ export class UserRepositoryImpl implements IUserRepository {
   async findById(id: string): Promise<User | null> {
     const orm = await this.repo.findOne({
       where: { id },
-      select: ['id', 'email', 'passwordHash', 'name', 'role', 'createdAt', 'farmName', 'isTwoFactorEnabled', 'twoFactorSecret'],
+      select: [
+        'id',
+        'email',
+        'passwordHash',
+        'name',
+        'role',
+        'createdAt',
+        'farmName',
+        'isTwoFactorEnabled',
+        'twoFactorSecret',
+        'phoneCountry',
+        'phoneNumber',
+      ],
     });
     if (!orm) return null;
     return this.toDomain(orm);
@@ -67,8 +93,16 @@ export class UserRepositoryImpl implements IUserRepository {
       ...(data.name && { name: data.name }),
       ...(data.role && { role: data.role }),
       ...(data.farmName !== undefined && { farmName: data.farmName }),
-      ...(data.isTwoFactorEnabled !== undefined && { isTwoFactorEnabled: data.isTwoFactorEnabled }),
-      ...(data.twoFactorSecret !== undefined && { twoFactorSecret: data.twoFactorSecret }),
+      ...(data.isTwoFactorEnabled !== undefined && {
+        isTwoFactorEnabled: data.isTwoFactorEnabled,
+      }),
+      ...(data.twoFactorSecret !== undefined && {
+        twoFactorSecret: data.twoFactorSecret,
+      }),
+      ...(data.phoneCountry !== undefined && {
+        phoneCountry: data.phoneCountry,
+      }),
+      ...(data.phoneNumber !== undefined && { phoneNumber: data.phoneNumber }),
     });
     const updated = await this.findById(id);
     if (!updated) throw new Error('User not found after update');

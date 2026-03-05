@@ -54,4 +54,4 @@ import { UserSessionOrmEntity } from './user-session.orm-entity';
   ],
   exports: [JwtModule, PassportModule],
 })
-export class AuthModule { }
+export class AuthModule {}

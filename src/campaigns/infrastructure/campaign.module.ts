@@ -4,8 +4,8 @@ import { CampaignOrmEntity } from './campaign.orm-entity';
 import { CampaignController } from './campaign.controller';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([CampaignOrmEntity])],
-    controllers: [CampaignController],
-    exports: [TypeOrmModule],
+  imports: [TypeOrmModule.forFeature([CampaignOrmEntity])],
+  controllers: [CampaignController],
+  exports: [TypeOrmModule],
 })
-export class CampaignModule { }
+export class CampaignModule {}

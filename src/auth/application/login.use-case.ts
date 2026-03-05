@@ -20,7 +20,7 @@ export class LoginUseCase {
     @Inject(IUserSessionRepository)
     private readonly userSessionRepository: IUserSessionRepository,
     private readonly jwtService: JwtService,
-  ) { }
+  ) {}
 
   async execute(dto: LoginDto) {
     const user = await this.userRepository.findByEmail(dto.email);
@@ -47,7 +47,9 @@ export class LoginUseCase {
       });
 
       if (!isValid) {
-        throw new UnauthorizedException('El código 2FA es incorrecto o ha expirado');
+        throw new UnauthorizedException(
+          'El código 2FA es incorrecto o ha expirado',
+        );
       }
     }
 
