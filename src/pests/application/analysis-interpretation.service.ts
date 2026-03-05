@@ -64,7 +64,7 @@ export class AnalysisInterpretationService {
                     {
                         role: 'system',
                         content:
-                            'Eres un agrónomo especializado en plagas de tomate. ' +
+                            'Eres un agrónomo especializado en plagas. ' +
                             'Recibirás resultados estructurados de detección (ya procesados) de un lote y debes devolver ' +
                             'una interpretación ejecutiva bimodal. ' +
                             'Responde SOLO JSON estricto con este esquema exacto:\n' +
@@ -253,12 +253,12 @@ export class AnalysisInterpretationService {
                     dose: 'No aplica',
                     method:
                         result.verificationReason ??
-                        'Imagen fuera del dominio de inspección agrícola para tomate.',
+                        'Imagen fuera del dominio de inspección agrícola.',
                 },
                 biosecurityStatus: 'RECHAZADA',
                 biosecurityProtocol:
                     result.verificationReason ??
-                    'Solicitar captura válida de hoja, planta o trampa relacionada con tomate.',
+                    'Solicitar captura válida de hoja, planta o trampa.',
             };
         }
 
