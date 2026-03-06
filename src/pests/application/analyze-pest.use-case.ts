@@ -263,7 +263,7 @@ export class AnalyzePestUseCase {
             });
             const frontUrl = process.env.ORIGIN_URL || 'http://localhost:3000';
 
-            let msg = `🔬 *PesteCode AI Analysis*\nLote Analizado: ${fieldRecord?.field?.name || 'Desconocido'}\n\n`;
+            let msg = `🔬 *PlagaCode AI Analysis*\nLote Analizado: ${fieldRecord?.field?.name || 'Desconocido'}\n\n`;
             msg += `*Resumen General:*\n${interpretation.generalSummary}\n\n`;
             msg += `*Puedes ver más detalles en:*\n${frontUrl}/scan-history/${createdAnalysisId}`;
 
