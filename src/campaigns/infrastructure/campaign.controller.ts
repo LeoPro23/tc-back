@@ -7,6 +7,7 @@ import {
   Post,
   Req,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -96,6 +97,188 @@ export class CampaignController {
       infectionRate,
       activeNodes,
       totalFields,
+    };
+  }
+
+  @Get('pests-temporal')
+  async getPestsTemporal(@Req() req: any, @Query('fieldIds') fieldIds?: string) {
+    const userId = req.user.userId;
+
+    const currentCampaign = await this.campaignRepository.findOne({
+      where: { user: { id: userId }, isActive: true },
+    });
+
+    if (!currentCampaign) {
+      return { data: [], topPests: [] };
+    }
+
+    const pestQuery = this.analysisRepository
+      .createQueryBuilder('analysis')
+      .innerJoin('analysis.fieldCampaign', 'fc')
+      .innerJoin('fc.campaign', 'campaign')
+      .where('campaign.id = :campaignId', { campaignId: currentCampaign.id })
+      .andWhere('analysis.isInfected = true')
+      .andWhere('analysis.primaryTargetPest IS NOT NULL');
+
+    if (fieldIds) {
+      const fieldIdArray = fieldIds.split(',').map((id) => id.trim());
+      pestQuery.innerJoin('fc.field', 'field');
+      pestQuery.andWhere('field.id IN (:...fieldIdArray)', { fieldIdArray });
+    }
+
+    const topPestsResult = await pestQuery
+      .select('analysis.primaryTargetPest', 'pestName')
+      .addSelect('COUNT(analysis.id)', 'count')
+      .groupBy('analysis.primaryTargetPest')
+      .orderBy('count', 'DESC')
+      .limit(3)
+      .getRawMany();
+
+    const topPests = topPestsResult.map((row) => row.pestName);
+
+    if (topPests.length === 0) {
+      return { data: [], topPests: [] };
+    }
+
+    // 2. Get the daily counts for these top pests
+    const temporalQuery = this.analysisRepository
+      .createQueryBuilder('analysis')
+      .innerJoin('analysis.fieldCampaign', 'fc')
+      .innerJoin('fc.campaign', 'campaign')
+      .where('campaign.id = :campaignId', { campaignId: currentCampaign.id })
+      .andWhere('analysis.primaryTargetPest IN (:...topPests)', { topPests });
+
+    if (fieldIds) {
+      const fieldIdArray = fieldIds.split(',').map((id) => id.trim());
+      temporalQuery.innerJoin('fc.field', 'field');
+      temporalQuery.andWhere('field.id IN (:...fieldIdArray)', { fieldIdArray });
+    }
+
+    const temporalData = await temporalQuery
+      .select("TO_CHAR(analysis.date, 'YYYY-MM-DD')", 'dateStr')
+      .addSelect('analysis.primaryTargetPest', 'pestName')
+      .addSelect('COUNT(analysis.id)', 'count')
+      .groupBy("TO_CHAR(analysis.date, 'YYYY-MM-DD')")
+      .addGroupBy('analysis.primaryTargetPest')
+      .orderBy("TO_CHAR(analysis.date, 'YYYY-MM-DD')", 'ASC')
+      .getRawMany();
+
+    // 3. Format the data for Recharts
+    // Expected format: [ { date: '2023-10-01', pestA: 5, pestB: 2 }, ... ]
+
+    // First, group by date
+    const groupedByDate: Record<string, any> = {};
+
+    for (const row of temporalData) {
+      const dateStr = row.dateStr;
+      const pestName = row.pestName;
+      const count = Number(row.count);
+
+      if (!groupedByDate[dateStr]) {
+        groupedByDate[dateStr] = { dateStr };
+        // Initialize all top pests to 0 for this date
+        topPests.forEach(pest => {
+          groupedByDate[dateStr][pest] = 0;
+        });
+      }
+
+      groupedByDate[dateStr][pestName] = count;
+    }
+
+    const data = Object.values(groupedByDate);
+
+    return {
+      data,
+      topPests
+    };
+  }
+
+  @Get('fields-temporal')
+  async getFieldsTemporal(@Req() req: any, @Query('fieldIds') fieldIds?: string) {
+    const userId = req.user.userId;
+
+    const currentCampaign = await this.campaignRepository.findOne({
+      where: { user: { id: userId }, isActive: true },
+    });
+
+    if (!currentCampaign) {
+      return { data: [], topFields: [] };
+    }
+
+    // 1. Get the top 3 fields for the current campaign
+    const fieldQuery = this.analysisRepository
+      .createQueryBuilder('analysis')
+      .innerJoin('analysis.fieldCampaign', 'fc')
+      .innerJoin('fc.campaign', 'campaign')
+      .innerJoin('fc.field', 'field') // Join standard to get field properties
+      .where('campaign.id = :campaignId', { campaignId: currentCampaign.id })
+      .andWhere('analysis.isInfected = true');
+
+    if (fieldIds) {
+      const fieldIdArray = fieldIds.split(',').map((id) => id.trim());
+      fieldQuery.andWhere('field.id IN (:...fieldIdArray)', { fieldIdArray });
+    }
+
+    const topFieldsResult = await fieldQuery
+      .select('field.name', 'fieldName')
+      .addSelect('COUNT(analysis.id)', 'count')
+      .groupBy('field.name')
+      .orderBy('count', 'DESC')
+      .limit(3)
+      .getRawMany();
+
+    const topFields = topFieldsResult.map((row) => row.fieldName);
+
+    if (topFields.length === 0) {
+      return { data: [], topFields: [] };
+    }
+
+    // 2. Get the daily counts for these top fields
+    const temporalQuery = this.analysisRepository
+      .createQueryBuilder('analysis')
+      .innerJoin('analysis.fieldCampaign', 'fc')
+      .innerJoin('fc.campaign', 'campaign')
+      .innerJoin('fc.field', 'field')
+      .where('campaign.id = :campaignId', { campaignId: currentCampaign.id })
+      .andWhere('field.name IN (:...topFields)', { topFields });
+
+    if (fieldIds) {
+      const fieldIdArray = fieldIds.split(',').map((id) => id.trim());
+      temporalQuery.andWhere('field.id IN (:...fieldIdArray)', { fieldIdArray });
+    }
+
+    const temporalData = await temporalQuery
+      .select("TO_CHAR(analysis.date, 'YYYY-MM-DD')", 'dateStr')
+      .addSelect('field.name', 'fieldName')
+      .addSelect('COUNT(analysis.id)', 'count')
+      .groupBy("TO_CHAR(analysis.date, 'YYYY-MM-DD')")
+      .addGroupBy('field.name')
+      .orderBy("TO_CHAR(analysis.date, 'YYYY-MM-DD')", 'ASC')
+      .getRawMany();
+
+    // 3. Format the data for Recharts
+    const groupedByDate: Record<string, any> = {};
+
+    for (const row of temporalData) {
+      const dateStr = row.dateStr;
+      const fieldName = row.fieldName;
+      const count = Number(row.count);
+
+      if (!groupedByDate[dateStr]) {
+        groupedByDate[dateStr] = { dateStr };
+        topFields.forEach(field => {
+          groupedByDate[dateStr][field] = 0;
+        });
+      }
+
+      groupedByDate[dateStr][fieldName] = count;
+    }
+
+    const data = Object.values(groupedByDate);
+
+    return {
+      data,
+      topFields
     };
   }
 
