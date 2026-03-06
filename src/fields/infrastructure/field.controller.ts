@@ -21,8 +21,11 @@ export class FieldController {
   constructor(
     @InjectRepository(FieldOrmEntity)
     private readonly fieldRepository: Repository<FieldOrmEntity>,
-  ) {}
+  ) { }
 
+  // PASO 0.1.2 (BACKEND ORIGEN DE DATOS - CAMPOS): Consulta BD Campos
+  // Se gatilla junto con el inicio de la página. Busca en PostgreSQL todos los campos
+  // (polígonos de tierra reales o fincas) registrados por este usuario.
   @Get()
   async findAll(@Req() req: any) {
     const userId = req.user.userId;

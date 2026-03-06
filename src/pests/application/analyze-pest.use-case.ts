@@ -277,6 +277,10 @@ export class AnalyzePestUseCase {
       // la respuesta rápida al Frontend, levantamos una tarea Async para enviar el Whatsapp vía n8n.
       if (createdAnalysisId) {
         try {
+          // PASO 7.1 (ORIGEN NÚMERO CELULAR): Re-hidratación del Usuario
+          // Como el JWT original (Paso 3.1) solo traía el ID por seguridad y ligereza,
+          // hacemos una consulta SQL SELECT fresca a la tabla de Usuarios (`UserOrmEntity`)
+          // para asegurarnos de tener el `phoneCountry` y `phoneNumber` más actualizados del agricultor.
           const fullUser = await this.entityManager.findOne(UserOrmEntity, { where: { id: userId } });
           if (fullUser && fullUser.phoneCountry && fullUser.phoneNumber) {
             const fieldRecord = await this.entityManager.findOne(FieldCampaignOrmEntity, {

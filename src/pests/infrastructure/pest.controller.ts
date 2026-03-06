@@ -55,6 +55,10 @@ export class PestController {
       mimeType: file.mimetype,
     }));
 
+    // PASO 3.1 (BACKEND - ORIGEN DE DATOS): Extracción de Identidad Fuerte
+    // El guardia `JwtAuthGuard` interceptó el Header "Authorization: Bearer <token>", 
+    // lo desencriptó usando nuestra llave secreta y lo inyectó en `req.user`.
+    // De aquí sacamos el ID del usuario de forma segura, evitando que un hacker lo envíe en el body.
     const userId = req.user?.userId || req.user?.sub;
     if (!userId) {
       throw new BadRequestException(

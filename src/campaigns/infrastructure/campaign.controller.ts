@@ -282,6 +282,9 @@ export class CampaignController {
     };
   }
 
+  // PASO 0.1.1 (BACKEND ORIGEN DE DATOS - CAMPAÑAS): Consulta BD Lotes
+  // Este endpoint recibe la petición inicial del Frontend al cargar la página de Análisis.
+  // Rescata el JWT del header, y saca el ID del agricultor para buscar solo SUS campañas en la tabla SQL.
   @Get()
   async findAll(@Req() req: any) {
     const userId = req.user.userId;

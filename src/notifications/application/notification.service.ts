@@ -20,7 +20,10 @@ export class NotificationService {
             return;
         }
 
-        // Asegurarse de quitar símbolos como + de ambos lados si existieran.
+        // PASO 7.1.1 (NOTIFICACIONES - HIGIENE DE DATOS)
+        // El teléfono sacado de PostgreSQL viene tal cual lo ingresó el usuario. 
+        // Empleamos Regex `/\D/g` para destruir cualquier "+", letra o espacio de más,
+        // asegurando un formato numérico puro internacional para que la API de WhatsApp no lo rechace.
         const rawCountry = phoneCountry.replace(/\D/g, '');
         const rawNumber = phoneNumber.replace(/\D/g, '');
         const fullPhone = `${rawCountry}${rawNumber}`;
