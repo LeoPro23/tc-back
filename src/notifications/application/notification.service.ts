@@ -30,6 +30,9 @@ export class NotificationService {
             return;
         }
 
+        // PASO 7.1 (NOTIFICACIONES - COMPOSICIÓN DEL WEBHOOK)
+        // Se formatea el teléfono (ej. 51987654321) y el cuerpo del mensaje markdown
+        // para dárselo en bandeja de plata al Endpoint de WhatsApp (n8n o Evolution API).
         const payload = {
             phone: fullPhone,
             message,
@@ -37,7 +40,11 @@ export class NotificationService {
 
         try {
             this.logger.log(`Enviando notificación al teléfono: ${fullPhone} (N8N webhook)`);
-            // No devolvemos await final al usuario en general para no bloquear, el catchError logea en consola si falla asincrónicamente
+            // PASO 7.2 (NOTIFICACIONES - LANZAMIENTO ASÍNCRONO SIN BLOQUEO)
+            // Disparamos la petición POST. Nota que se maneja asincrónicamente y se captura
+            // silenciosamente cualquier caída (catchError). 
+            // Si WhatsApp se cae, la API de todas formas devolverá 200 OK al frontend 
+            // para que el agricultor vea sus resultados sin interrupciones.
             await firstValueFrom(
                 this.httpService.post(webhookUrl, payload).pipe(
                     catchError((error) => {

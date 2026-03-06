@@ -17,6 +17,9 @@ export class FastApiPestRepositoryImpl implements IPestRepository {
     formData.append('file', imageBuffer, filename);
 
     try {
+      // PASO 5.2.1 (CAPA DE INFRAESTRUCTURA - ML): Petición HTTP a Python
+      // Aquí Node.js abandona el control temporalmente y llama a la API de FastAPI.
+      // Envía la imagen mediante FormData al endpoint /predict del modelo YOLO.
       const response = await axios.post(
         `${this.fastApiUrl}/predict`,
         formData,
@@ -41,6 +44,10 @@ export class FastApiPestRepositoryImpl implements IPestRepository {
       );
       const models = Array.isArray(data.models) ? data.models : [];
 
+      // PASO 5.2.2 (CAPA DE INFRAESTRUCTURA - ML): Formateo de respuesta
+      // Convierte los tensores y coordenadas crudas que devuelve Python
+      // en un objeto fuertemente tipado de TypeScript (PestAnalysisResult)
+      // útil para nuestra BDD y el frontend.
       return new PestAnalysisResult(
         data.filename,
         detections,

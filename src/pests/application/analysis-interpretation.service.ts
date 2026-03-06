@@ -69,6 +69,9 @@ export class AnalysisInterpretationService {
           temperature: 0.2,
           max_tokens: 3000,
           response_format: { type: 'json_object' },
+          // PASO 5.3.1 (INTELIGENCIA ARTIFICIAL MULTIMODAL - LLM)
+          // Se llama a un LLM avanzado (GPT-4o/Gemini) configurando un SYSTEM PROMPT estricto.
+          // Se le obliga a actuar como "agrónomo experto" y a devolver la respuesta SÓLO en un formato JSON exacto.
           messages: [
             {
               role: 'system',
@@ -97,6 +100,9 @@ export class AnalysisInterpretationService {
                 'Si la imagen está rechazada por verificación (verificada=false), usa estado RECHAZADA y emite que no aplica receta.\n' +
                 'Provee un resumen general considerando TODAS las fotos del lote, así como instrucciones operativas para todo el campo.',
             },
+            // PASO 5.3.2 (CONSTRUCCIÓN DEL CONTEXTO PROMPT)
+            // Se le envían al LLM las salidas matemáticas que arrojó YOLO (la plaga detectada y confianza)
+            // combinadas dinámicamente con el conocimiento humano (estado de la planta, suelo y clima).
             {
               role: 'user',
               content:
@@ -104,22 +110,25 @@ export class AnalysisInterpretationService {
                 JSON.stringify(this.toPromptPayload(results)) +
                 (agronomicContext
                   ? '\n\nContexto agronómico del lote proporcionado por el usuario:\n' +
-                    (agronomicContext.phenologicalState
-                      ? `- Estado fenológico actual: ${agronomicContext.phenologicalState}\n`
-                      : '') +
-                    (agronomicContext.soilQuality
-                      ? `- Calidad del suelo: ${agronomicContext.soilQuality}\n`
-                      : '') +
-                    (agronomicContext.currentClimate
-                      ? `- Clima actual: ${agronomicContext.currentClimate}\n`
-                      : '') +
-                    'Utiliza este contexto para ajustar las recomendaciones, productos y guía operativa.'
+                  (agronomicContext.phenologicalState
+                    ? `- Estado fenológico actual: ${agronomicContext.phenologicalState}\n`
+                    : '') +
+                  (agronomicContext.soilQuality
+                    ? `- Calidad del suelo: ${agronomicContext.soilQuality}\n`
+                    : '') +
+                  (agronomicContext.currentClimate
+                    ? `- Clima actual: ${agronomicContext.currentClimate}\n`
+                    : '') +
+                  'Utiliza este contexto para ajustar las recomendaciones, productos y guía operativa.'
                   : ''),
             },
           ],
         },
       );
 
+      // PASO 5.3.3 (PARSEADO SEGURO)
+      // Extraemos la respuesta cruda en JSON del LLM, la parseamos y aseguramos que haya devuelto 
+      // todos los campos solicitados. Si la IA alucinó un atributo, `buildFallbackInterpretation` toma el control.
       const rawContent = response.choices?.[0]?.message?.content;
       const parsed = this.parseRawResponse(rawContent);
       return this.mergeWithFallback(parsed, results);
@@ -297,9 +306,8 @@ export class AnalysisInterpretationService {
     const generalSummary =
       rejectedCount > 0
         ? `Lote procesado: ${positiveCount} imágenes con hallazgos y ${rejectedCount} rechazadas por verificación.`
-        : `Lote procesado: ${positiveCount} imágenes con hallazgos y ${
-            results.length - positiveCount
-          } sin detecciones de plaga.`;
+        : `Lote procesado: ${positiveCount} imágenes con hallazgos y ${results.length - positiveCount
+        } sin detecciones de plaga.`;
 
     return {
       generalSummary,

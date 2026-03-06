@@ -15,7 +15,7 @@ import { JwtAuthGuard } from '../../auth/infrastructure/jwt-auth.guard';
 
 @Controller('pests')
 export class PestController {
-  constructor(private readonly analyzePestUseCase: AnalyzePestUseCase) {}
+  constructor(private readonly analyzePestUseCase: AnalyzePestUseCase) { }
 
   @Post('analyze')
   @UseInterceptors(FileInterceptor('file'))
@@ -31,6 +31,9 @@ export class PestController {
     );
   }
 
+  // PASO 3 (BACKEND CONTROLLER): Puerta de entrada segura de la petición
+  // Este controlador está protegido por JwtAuthGuard que verifica el Token.
+  // Se usa FilesInterceptor para atrapar los archivos binarios (imágenes) del multipart.
   @UseGuards(JwtAuthGuard)
   @Post('analyze/batch')
   @UseInterceptors(FilesInterceptor('files'))
@@ -70,6 +73,9 @@ export class PestController {
       currentClimate: currentClimate || null,
     };
 
+    // PASO 4 (BACKEND CONTROLLER): Delegación al Caso de Uso
+    // Una vez validados superficialmente los parámetros (validando IDs y formatos básicos),
+    // el controlador envía todo en crudo a la lógica de negocio profunda en AnalyzePestUseCase.
     return this.analyzePestUseCase.executeBatch(
       images,
       userId,

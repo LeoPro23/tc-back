@@ -39,6 +39,8 @@ export class AnalyzePestUseCase {
     filename: string,
     mimeType: string,
   ): Promise<PestAnalysisResult> {
+    // Filtro antibasura para verificar que la imagen sea realmente una foto
+    // de cultivo agricola/hoja vegetal
     const decision = await this.imageVerificationService.verifyImage(
       imageBuffer,
       mimeType,
@@ -83,8 +85,12 @@ export class AnalyzePestUseCase {
       resultTemp: PestAnalysisResult;
     }[] = [];
 
-    // 1. Process sequentially ML Inference (sin subir a minio todavía)
+    // PASO 5 (CASO DE USO): 1. Inferencia Secuencial y Filtro Antibasura
+    // Se recorren las imágenes en la memoria RAM del servidor sin guardarlas en BD aún.
     for (const image of images) {
+      // PASO 5.1: Filtro antibasura (Image Verification Service)
+      // Delegamos a un Agente GenAI la decisión de si la foto es realmente agricultura.
+      // Así ahorramos recursos costosos de inferencia de objetos si suben una "selfie".
       const decision = await this.imageVerificationService.verifyImage(
         image.buffer,
         image.mimeType,
@@ -102,6 +108,9 @@ export class AnalyzePestUseCase {
         continue;
       }
 
+      // PASO 5.2: Inferencia de Machine Learning Computacional (YOLO en FastAPI)
+      // Si la foto es válida, hace una petición HTTP a nuestro microservicio Python (ml-service).
+      // Nos retorna las coordenadas de las plagas detectadas y su probabilidad (cajas delimitadoras).
       const resultTemp = await this.pestRepository.analyzeImage(
         image.buffer,
         image.filename,
@@ -113,14 +122,18 @@ export class AnalyzePestUseCase {
       }
     }
 
-    // 2. Obtener Interpretación General del LLM
+    // PASO 5.3: Obtener Interpretación Agronómica General del LLM Experto
+    // Se toma todo el contexto agronómico del usuario y las plagas detectadas que envió YOLO,
+    // y se manda al gran LLM para que redacte sugerencias, protocolos y recomiende químicos.
     const interpretation =
       await this.analysisInterpretationService.interpretBatch(
         results,
         agronomicContext,
       );
 
-    // 3. Efectuar Transacción de Guardado BDD + Subida Minio
+    // PASO 6 (PERSISTENCIA Y BDD): Transacción atómica de Guardado (TypeORM)
+    // Para evitar registros "a medias", se empaqueta toda la creación en un Transaction.
+    // Si algo falla, el sistema entero hace Rollback.
     let createdAnalysisId: string | undefined;
 
     try {
@@ -168,6 +181,8 @@ export class AnalyzePestUseCase {
           }
         }
 
+        // PASO 6.1 (Guardado Global): Crear el Registro Padre "AnalysisFieldCampaign"
+        // Este registro asocia el lote con los resúmenes de clima, estado fenológico y diagnóstico.
         const analysisLog = manager.create(AnalysisFieldCampaignOrmEntity, {
           fieldCampaign,
           date: new Date(),
@@ -191,7 +206,8 @@ export class AnalyzePestUseCase {
         for (let i = 0; i < validImagesForMinio.length; i++) {
           const img = validImagesForMinio[i];
 
-          // Subida a minio
+          // PASO 6.2 (Bucle de Imágenes): Subida física P2P a Storage S3 MinIO.
+          // Toma el archivo de memoria RAM y lo guarda físicamente, devolviendo un URL HTTPS único.
           const uploaded = await this.minioService.uploadImage(
             img.buffer,
             img.filename,
@@ -203,6 +219,8 @@ export class AnalyzePestUseCase {
             (p) => p.filename.toLowerCase() === img.filename.toLowerCase(),
           );
 
+          // PASO 6.3 (Guardado Hijos): Attach de imágenes detectadas
+          // Vincula la URL del archivo anterior a la BDD SQL asociado con su recomendación particular.
           const attachedLog = manager.create(AttachedImageOrmEntity, {
             analysis: analysisLog,
             url: uploaded.url,
@@ -217,7 +235,8 @@ export class AnalyzePestUseCase {
           });
           await manager.save(attachedLog);
 
-          // Resultados Modelos
+          // PASO 6.4 (Guardado Nietos): Resultado Predictivo (Bounding Boxes)
+          // Se guardan las coordenadas (X, y, ancho, alto) para poder dibujarlas luego en el frontend.
           for (const det of img.resultTemp.detections) {
             const rawModelName = det.model || 'yolov8_default';
             let dbModel = modelCache.get(rawModelName);
@@ -253,7 +272,9 @@ export class AnalyzePestUseCase {
         `Análisis guardado exitosamente: ${results.length} imgs para user ${userId}`,
       );
 
-      // Dispatch WhatsApp Webhook Async (UNA SOLA VEZ POR TODO EL LOTE YA FINALIZADO)
+      // PASO 7 FINAL ASÍNCRONO (DISPARADOR WHATSAPP)
+      // Como el proceso transaccional terminó bien, la data ya es nuestra. Sin interrumpir
+      // la respuesta rápida al Frontend, levantamos una tarea Async para enviar el Whatsapp vía n8n.
       if (createdAnalysisId) {
         try {
           const fullUser = await this.entityManager.findOne(UserOrmEntity, { where: { id: userId } });

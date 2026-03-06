@@ -37,7 +37,10 @@ export class ImageVerificationService {
       };
     }
 
-    // Pre-validación de calidad de imagen (brillo y saturación)
+    // PASO 5.1.1 (VERIFICACIÓN FÍSICA Y ÓPTICA)
+    // Antes de llamar a la IA Textual y gastar cuota, procesamos la imagen con la librería "sharp"
+    // para medir el nivel de negro (luminancia) y exceso de color (saturación).
+    // Si la imagen es un cuadrado completamente oscuro, la rechazamos localmente aquí mismo ahorrando tiempo.
     const qualityCheck = await this.checkImageQuality(imageBuffer);
     if (!qualityCheck.isValid) {
       return qualityCheck;
@@ -53,6 +56,10 @@ export class ImageVerificationService {
     const client = this.getOpenRouterClient();
 
     try {
+      // PASO 5.1.2 (VERIFICACIÓN COGNITIVA CON LLM MULTIMODAL)
+      // Acá empacamos la foto a Base-64 e instruimos fuertemente y en rol de "verificador estricto"
+      // a la IA (ej. Gemini/GPT-4 via OpenRouter) para descartar cualquier contexto que NO sea agrícola.
+      // Así evitamos pasar una foto válida (bien iluminada) pero que no contiene plantas.
       const response = await client.chat.completions.create({
         model: this.openRouterModel,
         temperature: 0,

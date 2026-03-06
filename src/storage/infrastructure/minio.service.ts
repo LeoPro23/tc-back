@@ -20,7 +20,7 @@ export class MinioService {
         hostname = url.hostname;
         useSSL = url.protocol === 'https:';
       }
-    } catch (e) {}
+    } catch (e) { }
 
     this.minioClient = new Minio.Client({
       endPoint: hostname,
@@ -72,6 +72,9 @@ export class MinioService {
     const extension = originalFilename.split('.').pop() || 'jpg';
     const filename = `${uuidv4()}_${originalFilename.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
 
+    // PASO 6.2.1 (ALMACENAMIENTO BINARIO - S3/MINIO)
+    // El Buffer de RAM directamente se serializa hacia el Object Storage
+    // usando librerías AWS S3 compatibles (MinIO en este caso).
     try {
       await this.minioClient.putObject(
         this.bucketName,
@@ -94,6 +97,9 @@ export class MinioService {
         cleanHost = new URL(cleanHost).hostname;
       }
 
+      // PASO 6.2.2 (GENERACIÓN DE RUTA PÚBLICA)
+      // Se formatea la IP/Dominio de Edge Cloud para devolverle al UseCase 
+      // un string (URL) en texto plano, que será lo que realmente se almacene en Postgres SQL.
       const publicUrl = `${protocol}://${cleanHost}${port}/${this.bucketName}/${filename}`;
       return { url: publicUrl, filename };
     } catch (error) {
