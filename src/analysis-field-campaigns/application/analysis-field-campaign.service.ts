@@ -61,6 +61,7 @@ export class AnalysisFieldCampaignService {
         .innerJoinAndSelect('fieldCampaign.field', 'field')
         .leftJoinAndSelect('analysis.attachedImages', 'attachedImages')
         .leftJoinAndSelect('attachedImages.modelResults', 'modelResults')
+        .leftJoinAndSelect('modelResults.model', 'model')
         .where('campaign.user.id = :userId', { userId })
         .andWhere('analysis.id = :id', { id })
         .getOne();
