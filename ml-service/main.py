@@ -6,7 +6,7 @@ from PIL import Image, ImageStat
 import os
 import uvicorn
 
-app = FastAPI(title="Tomato Pest Detection Service")
+app = FastAPI(title="Pest Detection Service")
 
 # Allow CORS for local development
 app.add_middleware(
