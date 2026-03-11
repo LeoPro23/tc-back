@@ -74,6 +74,7 @@ export class AnalyzePestUseCase {
       currentClimate: string | null;
     },
   ): Promise<{
+    analysisId?: string;
     results: PestAnalysisResult[];
     interpretation: BatchInterpretation;
   }> {
@@ -310,6 +311,6 @@ export class AnalyzePestUseCase {
       );
     }
 
-    return { results, interpretation };
+    return { analysisId: createdAnalysisId, results, interpretation };
   }
 }
