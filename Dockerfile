@@ -30,8 +30,8 @@ RUN pip install --no-cache-dir -r ml-service/requirements.txt
 # 6. Copiar el resto del código
 COPY . .
 
-# 7. Compilar NestJS
-RUN npm run build
+# 7. Compilar NestJS asegurando limpiar la caché previa
+RUN rm -rf dist && npm run build
 
 # 8. Dar permisos de ejecución al script de arranque
 RUN chmod +x start-services.sh
