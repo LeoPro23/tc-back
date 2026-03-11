@@ -13,6 +13,7 @@ import { ModelModule } from './models/infrastructure/model.module';
 import { ModelResultModule } from './model-results/infrastructure/model-result.module';
 import { StorageModule } from './storage/infrastructure/storage.module';
 import { NotificationModule } from './notifications/infrastructure/notification.module';
+import { AnalysisCommentsModule } from './analysis-comments/infrastructure/analysis-comments.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { NotificationModule } from './notifications/infrastructure/notification.
     ModelModule,
     ModelResultModule,
     NotificationModule,
+    AnalysisCommentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

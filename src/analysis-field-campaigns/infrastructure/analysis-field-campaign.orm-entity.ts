@@ -11,6 +11,8 @@ import {
 } from 'typeorm';
 import { FieldCampaignOrmEntity } from '../../field-campaigns/infrastructure/field-campaign.orm-entity';
 import { AttachedImageOrmEntity } from '../../attached-images/infrastructure/attached-image.orm-entity';
+import { AnalysisCommentOrmEntity } from '../../analysis-comments/infrastructure/analysis-comment.orm-entity';
+import { OneToOne } from 'typeorm';
 
 @Entity('analysis_field_campaign')
 export class AnalysisFieldCampaignOrmEntity {
@@ -62,6 +64,9 @@ export class AnalysisFieldCampaignOrmEntity {
 
   @OneToMany(() => AttachedImageOrmEntity, (image) => image.analysis)
   attachedImages: AttachedImageOrmEntity[];
+
+  @OneToOne(() => AnalysisCommentOrmEntity, (comment) => comment.analysisFieldCampaign)
+  comment: AnalysisCommentOrmEntity;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
