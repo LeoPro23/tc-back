@@ -30,7 +30,7 @@ export class AnalysisCommentController {
       throw new BadRequestException('El archivo de audio es requerido');
     }
 
-    const userId = req.user.userId;
+    const userId = req.user?.userId || req.user?.sub;
 
     // Disparamos el proceso asíncrono y no esperamos a que termine
     this.analysisCommentService.processCommentAsync(
