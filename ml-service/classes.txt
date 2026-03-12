@@ -1,0 +1,1 @@
+{0: 'minador', 1: 'mosca_blanca', 2: 'tuta_absoluta'}
