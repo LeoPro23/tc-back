@@ -4,6 +4,7 @@ import { CampaignOrmEntity } from './campaign.orm-entity';
 import { CampaignController } from './campaign.controller';
 import { AnalysisFieldCampaignOrmEntity } from '../../analysis-field-campaigns/infrastructure/analysis-field-campaign.orm-entity';
 import { FieldCampaignOrmEntity } from '../../field-campaigns/infrastructure/field-campaign.orm-entity';
+import { CampaignIntelligenceService } from '../application/campaign-intelligence.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([
@@ -12,6 +13,7 @@ import { FieldCampaignOrmEntity } from '../../field-campaigns/infrastructure/fie
     FieldCampaignOrmEntity
   ])],
   controllers: [CampaignController],
+  providers: [CampaignIntelligenceService],
   exports: [TypeOrmModule],
 })
 export class CampaignModule { }
