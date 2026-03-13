@@ -39,8 +39,7 @@ async def predict(file: UploadFile = File(...)):
         models = detector.get_model_names()
 
         # 1. Resolución de Imagen
-        # if image.width < 512 or image.height < 512:
-        if image.width < 256 or image.height < 256:
+        if image.width < 128 or image.height < 128:
             return {
                 "filename": file.filename, 
                 "models": models, 
