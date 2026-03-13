@@ -1,7 +1,7 @@
 import { config } from 'dotenv';
 config();
 
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { AnalysisInterpretationService } from './src/pests/application/analysis-interpretation.service';
@@ -43,6 +43,15 @@ const DEFAULT_CONTEXT: AgronomicContext = {
   soilQuality: 'Franco arenoso, buen drenaje',
   currentClimate: 'Temperaturas elevadas (28C - 32C), clima seco',
 };
+const DEFAULT_IMAGES_DIR = path.resolve(process.cwd(), 'tmp-images');
+const SUPPORTED_IMAGE_EXTENSIONS = new Set([
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.webp',
+  '.gif',
+  '.bmp',
+]);
 
 function printUsage() {
   console.log('Uso: npx ts-node measure-llm.ts [opciones] <imagen1> <imagen2> ...');
@@ -52,6 +61,8 @@ function printUsage() {
   console.log('  --suelo <texto>       Descripcion del suelo');
   console.log('  --clima <texto>       Descripcion del clima');
   console.log('  --help, -h            Muestra esta ayuda');
+  console.log('');
+  console.log('Si no pasas rutas, el script usa automaticamente la unica imagen que exista en tmp-images/.');
   console.log('');
   console.log('Ejemplo:');
   console.log(
@@ -128,6 +139,42 @@ function inferMimeType(filePath: string): string {
   }
 }
 
+async function resolveImagePaths(cliImagePaths: string[]): Promise<string[]> {
+  if (cliImagePaths.length > 0) {
+    return cliImagePaths;
+  }
+
+  let entries: string[];
+  try {
+    entries = await readdir(DEFAULT_IMAGES_DIR);
+  } catch {
+    throw new Error(
+      `No indicaste una imagen y no pude leer ${DEFAULT_IMAGES_DIR}.`,
+    );
+  }
+
+  const discoveredImagePaths = entries
+    .filter((entry) =>
+      SUPPORTED_IMAGE_EXTENSIONS.has(path.extname(entry).toLowerCase()),
+    )
+    .sort((left, right) => left.localeCompare(right))
+    .map((entry) => path.join(DEFAULT_IMAGES_DIR, entry));
+
+  if (discoveredImagePaths.length === 0) {
+    throw new Error(
+      `No indicaste una imagen y ${DEFAULT_IMAGES_DIR} no contiene imagenes compatibles.`,
+    );
+  }
+
+  if (discoveredImagePaths.length > 1) {
+    throw new Error(
+      `Se encontraron ${discoveredImagePaths.length} imagenes en ${DEFAULT_IMAGES_DIR}. Deja solo una o pasa la ruta por CLI.`,
+    );
+  }
+
+  return discoveredImagePaths;
+}
+
 async function loadImages(imagePaths: string[]): Promise<LoadedImage[]> {
   return Promise.all(
     imagePaths.map(async (imagePath) => ({
@@ -147,7 +194,7 @@ function roundMs(value: number | null): number | null {
 }
 
 async function main() {
-  const { imagePaths, agronomicContext, showHelp } = parseArgs(
+  const { imagePaths: cliImagePaths, agronomicContext, showHelp } = parseArgs(
     process.argv.slice(2),
   );
 
@@ -156,10 +203,7 @@ async function main() {
     return;
   }
 
-  if (imagePaths.length === 0) {
-    printUsage();
-    throw new Error('Debes indicar al menos una imagen real para medir el flujo.');
-  }
+  const imagePaths = await resolveImagePaths(cliImagePaths);
 
   console.log('Inicializando medicion real de /analysis/ ...');
   console.log(`- Imagenes recibidas: ${imagePaths.length}`);
@@ -256,34 +300,43 @@ async function main() {
   const llmFinishedAt = performance.now();
   const llmMs = llmFinishedAt - llmStartedAt;
 
-  const batchStartToRecommendationsMs = llmFinishedAt - batchStartedAt;
-  const firstMlRequestToRecommendationsMs =
+  const totalEndToEndMs = llmFinishedAt - batchStartedAt;
+  const totalFromMlToRecommendationMs =
     firstMlRequestStartedAt === null
       ? null
       : llmFinishedAt - firstMlRequestStartedAt;
+  const isSingleImageRun = images.length === 1;
 
   console.log('\n======================================================');
   console.log('MEDICION DE TIEMPOS');
   console.log('======================================================');
-  console.log(
-    `Tiempo total lote -> recomendaciones: ${roundMs(batchStartToRecommendationsMs)} ms`,
-  );
+  console.log('METRICA PRINCIPAL:');
+  if (isSingleImageRun) {
+    console.log(
+      `Tiempo total de todo (1 imagen: verificacion + ML + LLM): ${roundMs(totalEndToEndMs)} ms`,
+    );
+  } else {
+    console.log(
+      `Tiempo total de todo (lote completo: verificacion + ML + LLM): ${roundMs(totalEndToEndMs)} ms`,
+    );
+  }
+
+  if (totalFromMlToRecommendationMs === null) {
+    console.log(
+      'Tiempo total desde que entra a /predict hasta la recomendacion final: no aplica (ninguna imagen llego a /predict).',
+    );
+  } else {
+    console.log(
+      `Tiempo total desde que entra a /predict hasta la recomendacion final: ${roundMs(totalFromMlToRecommendationMs)} ms`,
+    );
+  }
+
+  console.log('\nDesglose:');
   console.log(
     `Tiempo acumulado verificacion: ${roundMs(verificationTotalMs)} ms`,
   );
   console.log(`Tiempo acumulado ML (/predict): ${roundMs(mlTotalMs)} ms`);
   console.log(`Tiempo LLM (interpretBatch): ${roundMs(llmMs)} ms`);
-
-  if (firstMlRequestToRecommendationsMs === null) {
-    console.log(
-      'Tiempo desde la primera llamada a ML hasta recomendaciones: no aplica (ninguna imagen llego a /predict).',
-    );
-  } else {
-    // Esta es la ventana exacta pedida: desde el primer envio al ML hasta que vuelve el LLM.
-    console.log(
-      `Tiempo primer /predict -> recomendaciones LLM: ${roundMs(firstMlRequestToRecommendationsMs)} ms`,
-    );
-  }
 
   console.log('\nDetalle por imagen:');
   console.table(
