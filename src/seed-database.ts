@@ -193,9 +193,6 @@ async function seed() {
       for (const fc of fieldCampaigns) {
         if (totalAnalyses >= MAX_ANALYSES) break;
 
-        const endemicPest = pick(PESTS);
-        const secondaryPest = pick(PESTS.filter(p => p !== endemicPest));
-
         // Distribuir los ~8 análisis uniformemente a lo largo de 20 semanas
         const weekStep = Math.floor(20 / ANALYSES_PER_SERIES); // cada ~2.5 semanas
 
@@ -211,7 +208,6 @@ async function seed() {
           // ── Curva Biológica ──
           let infectionChance: number;
           let bugDensity: number;
-          let isSecondaryPresent = false;
 
           if (w < 4) {
             infectionChance = 0.2;
@@ -222,14 +218,15 @@ async function seed() {
           } else if (w < 14) {
             infectionChance = 0.9;
             bugDensity = randInt(8, 20);
-            isSecondaryPresent = coin(0.3);
           } else {
             infectionChance = 0.25;
             bugDensity = randInt(0, 3);
           }
 
           const infected = coin(infectionChance) && bugDensity > 0;
-          const activePest = infected ? endemicPest : null;
+          // CADA análisis detecta una plaga aleatoria (no fija por lote)
+          // Esto genera datos variados en el radar multi-plaga
+          const activePest = infected ? pick(PESTS) : null;
           const maxConf = infected ? randFloat(0.72, 0.98) : null;
           const phenoIdx = Math.min(Math.floor(w / 4), PHENOLOGICAL_STATES.length - 1);
           const product = infected ? pick(PRODUCTS) : null;
@@ -295,8 +292,8 @@ async function seed() {
               else if (isLastModel) confidence = Math.max(0.4, base - randFloat(0.02, 0.08));
               else confidence = base; // best = mejor
 
-              // Plaga detectada en esta box
-              const detectedPest = (isSecondaryPresent && d === 1) ? secondaryPest : endemicPest;
+              // Plaga detectada = la misma que primaryTargetPest del análisis padre
+              const detectedPest = activePest!;
 
               // boundingBox = [x1, y1, x2, y2] (formato real del ML service)
               const x1 = randFloat(50, 800);
@@ -321,9 +318,9 @@ async function seed() {
               analysisFieldCampaign: savedAnalysis,
               audioUrl: `https://storage.techcrop.demo/audio/${savedAnalysis.id}/voice.webm`,
               transcription: infected
-                ? `Observo ${endemicPest} en hojas nuevas. Densidad ${bugDensity > 10 ? 'alta, intervención urgente' : 'moderada, monitorear en 3 días'}.`
+                ? `Observo ${activePest} en hojas nuevas. Densidad ${bugDensity > 10 ? 'alta, intervención urgente' : 'moderada, monitorear en 3 días'}.`
                 : 'Lote sano, sin signos visibles de plagas.',
-              diagnosis: infected ? `${endemicPest} nivel ${bugDensity > 10 ? 'severo' : 'leve-moderado'}` : 'Sin hallazgos',
+              diagnosis: infected ? `${activePest} nivel ${bugDensity > 10 ? 'severo' : 'leve-moderado'}` : 'Sin hallazgos',
               treatment: infected ? `Aplicar ${product} según ficha técnica.` : null,
             });
             await commentRepo.save(comment);

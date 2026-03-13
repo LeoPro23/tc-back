@@ -139,19 +139,8 @@ export class CampaignController {
       pestQuery.andWhere('field.id IN (:...fieldIdArray)', { fieldIdArray });
     }
 
-    const topPestsResult = await pestQuery
-      .select('analysis.primaryTargetPest', 'pestName')
-      .addSelect('COUNT(analysis.id)', 'count')
-      .groupBy('analysis.primaryTargetPest')
-      .orderBy('count', 'DESC')
-      .limit(3)
-      .getRawMany();
-
-    const topPests = topPestsResult.map((row) => row.pestName);
-
-    if (topPests.length === 0) {
-      return { data: [], topPests: [] };
-    }
+    // Forzamos las 3 plagas principales para que el gráfico siempre sea robusto (Triángulo fijo)
+    const topPests = ['tuta_absoluta', 'minador', 'mosca_blanca'];
 
     // 2. Get the daily counts for these top pests
     const temporalQuery = this.analysisRepository
@@ -470,7 +459,8 @@ export class CampaignController {
 
     // Recharts Radar requiere datos estructurados por Asignatura (Ej: pestName),
     // y para cada atributo (Ej: pestName), el valor de Lote A y Lote B
-    const ALL_PESTS = Array.from(new Set(queryData.map(r => r.pestName)));
+    // Forzamos las 3 plagas principales para que el gráfico de radar siempre mantenga su forma (Triángulo)
+    const ALL_PESTS = ['tuta_absoluta', 'minador', 'mosca_blanca'];
     const ALL_FIELDS = Array.from(new Set(queryData.map(r => r.fieldName)));
 
     const formattedData = ALL_PESTS.map(pest => {
@@ -712,7 +702,8 @@ export class CampaignController {
       campaignMap[c.id] = c.isActive ? `Campaña ${c.id.substring(0,8)} (Activa)` : `Campaña ${c.id.substring(0,8)}`;
     });
 
-    const ALL_PESTS = Array.from(new Set(queryData.map(r => r.pestName)));
+    // Forzamos las 3 plagas principales para el radar inter-campañas
+    const ALL_PESTS = ['tuta_absoluta', 'minador', 'mosca_blanca'];
     const ALL_CAMPAIGNS = Array.from(new Set(campaigns.map(c => campaignMap[c.id])));
 
     const formattedData = ALL_PESTS.map(pest => {
