@@ -16,7 +16,7 @@ import { AnalysisCommentOrmEntity } from './analysis-comments/infrastructure/ana
 dotenv.config();
 
 // ── CONFIGURACIÓN ─────────────────────────────────────────────
-const TARGET_USER_ID = '15de33f5-8b63-4211-a4dc-76cf35aa8583';
+const TARGET_USER_ID = '1282cd21-48aa-4708-8411-a26ca25132b1';
 const MAX_ANALYSES   = 100; // Límite total de registros de análisis
 
 // ── DataSource (standalone, misma config que database.module.ts) ─
@@ -193,60 +193,80 @@ async function seed() {
       for (const fc of fieldCampaigns) {
         if (totalAnalyses >= MAX_ANALYSES) break;
 
-        // Distribuir los ~8 análisis uniformemente a lo largo de 20 semanas
-        const weekStep = Math.floor(20 / ANALYSES_PER_SERIES); // cada ~2.5 semanas
+        // --- Estado de Simulación por Lote ---
+        // Inicializamos densidades para cada plaga en este lote específico
+        const lotState: Record<string, number> = {
+          'tuta_absoluta': randFloat(0, 2),
+          'mosca_blanca': randFloat(0, 2),
+          'minador': randFloat(0, 2)
+        };
+        let lastTreatedPest: string | null = null;
+        let treatmentCountdown = 0;
+
+        // Distribuir los ~8 análisis a lo largo de 20 semanas
+        const totalWeeks = 20;
+        const weekStep = totalWeeks / ANALYSES_PER_SERIES;
 
         for (let i = 0; i < ANALYSES_PER_SERIES; i++) {
           if (totalAnalyses >= MAX_ANALYSES) break;
 
-          const w = i * weekStep + randInt(0, 1); // semana relativa con jitter
+          const w = i * weekStep + randFloat(-0.5, 0.5); // con jitter decimal
           const analysisDate = new Date(campaign.startDate);
-          analysisDate.setDate(analysisDate.getDate() + w * 7 + randInt(0, 4));
+          analysisDate.setDate(analysisDate.getDate() + Math.round(w * 7));
 
           if (analysisDate > new Date()) continue;
 
-          // ── Curva Biológica ──
-          let infectionChance: number;
-          let bugDensity: number;
+          // 1. Evolución Biológica de las plagas en el lote
+          PESTS.forEach(p => {
+            if (lastTreatedPest === p && treatmentCountdown > 0) {
+              // Efecto del veneno: reducción drástica (70-90%)
+              lotState[p] *= randFloat(0.1, 0.3);
+            } else {
+              // Crecimiento natural (más agresivo para ver números más altos)
+              const growthFactor = lotState[p] > 1 ? randFloat(1.3, 2.0) : randFloat(0.8, 3.0);
+              lotState[p] *= growthFactor;
+            }
+            // Ruido ambiental (brotes aleatorios más fuertes)
+            if (coin(0.15)) lotState[p] += randInt(5, 12);
+            
+            // Cap al máximo razonable para la gráfica (0 a 25+)
+            if (lotState[p] > 35) lotState[p] = randFloat(25, 35);
+          });
 
-          if (w < 4) {
-            infectionChance = 0.2;
-            bugDensity = randInt(0, 2);
-          } else if (w < 8) {
-            infectionChance = 0.6;
-            bugDensity = randInt(3, 8);
-          } else if (w < 14) {
-            infectionChance = 0.9;
-            bugDensity = randInt(8, 20);
-          } else {
-            infectionChance = 0.25;
-            bugDensity = randInt(0, 3);
+          if (treatmentCountdown > 0) treatmentCountdown--;
+
+          // 2. Determinar plaga predominante hoy
+          const sortedPests = [...PESTS].sort((a, b) => lotState[b] - lotState[a]);
+          const activePest = sortedPests[0];
+          const bugDensity = Math.floor(lotState[activePest]);
+          
+          const infected = bugDensity > 2; // Umbral de detección visual
+          const product = infected && bugDensity > 10 ? pick(PRODUCTS) : null;
+
+          if (product) {
+            lastTreatedPest = activePest;
+            treatmentCountdown = 2; // El veneno dura ~2 análisis
           }
 
-          const infected = coin(infectionChance) && bugDensity > 0;
-          // CADA análisis detecta una plaga aleatoria (no fija por lote)
-          // Esto genera datos variados en el radar multi-plaga
-          const activePest = infected ? pick(PESTS) : null;
           const maxConf = infected ? randFloat(0.72, 0.98) : null;
           const phenoIdx = Math.min(Math.floor(w / 4), PHENOLOGICAL_STATES.length - 1);
-          const product = infected ? pick(PRODUCTS) : null;
 
           // ── Análisis Maestro ──
           const analysis = analysisRepo.create({
             fieldCampaign: fc,
             date: analysisDate,
             generalSummary: infected
-              ? `Se detectaron ${bugDensity} focos de ${activePest}. Severidad: ${bugDensity > 10 ? 'ALTA' : bugDensity > 4 ? 'MEDIA' : 'BAJA'}.`
-              : 'Monitoreo sin hallazgos significativos. Lote saludable.',
-            generalRecommendation: infected
-              ? `Aplicar ${product} en dosis de choque. Repetir a los 7 días si la presión persiste.`
-              : 'Mantener monitoreo semanal estándar.',
+              ? `Se detectó alta presión de ${activePest} (${bugDensity} focos). ${treatmentCountdown > 0 ? 'La población está bajando tras aplicación.' : 'Se observa expansión activa.'}`
+              : 'Lote estable. Presión de plagas por debajo del umbral económico.',
+            generalRecommendation: product
+              ? `Aplicación urgente de ${product}. Se recomienda rotar ingrediente activo en 15 días.`
+              : 'Continuar monitoreo preventivo bi-semanal.',
             recommendedProduct: product,
-            operativeGuide: infected
-              ? '1. Preparar mezcla 2ml/L. 2. Aplicar antes de las 9 AM. 3. Cubrir envés de hojas. 4. Reingreso 24h.'
+            operativeGuide: product
+              ? '1. Calibrar boquillas. 2. Presión constante 40psi. 3. Mojado total. 4. Uso de coadyuvante.'
               : null,
-            biosecurityProtocol: infected
-              ? 'EPP completo: máscara carbón activo, guantes nitrilo, lentes protección.'
+            biosecurityProtocol: product
+              ? 'Nivel de protección 3: traje impermeable, máscara doble filtro.'
               : null,
             phenologicalState: PHENOLOGICAL_STATES[phenoIdx],
             soilQuality: pick(SOIL_QUALITIES),
@@ -254,6 +274,7 @@ async function seed() {
             isInfected: infected,
             primaryTargetPest: activePest,
             maxConfidence: maxConf,
+            bugDensity: bugDensity,
           });
           const savedAnalysis = await analysisRepo.save(analysis);
           totalAnalyses++;

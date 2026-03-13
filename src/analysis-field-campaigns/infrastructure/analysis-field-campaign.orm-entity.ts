@@ -62,6 +62,9 @@ export class AnalysisFieldCampaignOrmEntity {
   @Column({ name: 'confianza_maxima', type: 'float', nullable: true })
   maxConfidence: number | null;
 
+  @Column({ name: 'bug_density', type: 'integer', default: 0 })
+  bugDensity: number;
+
   @OneToMany(() => AttachedImageOrmEntity, (image) => image.analysis)
   attachedImages: AttachedImageOrmEntity[];
 
