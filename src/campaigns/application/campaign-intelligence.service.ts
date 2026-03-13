@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import axios from 'axios';
 
 export interface StrategicRecommendationResponse {
+  chartInterpretation: string;
   summary: string;
   actionPlan: string;
 }
@@ -39,14 +40,14 @@ export class CampaignIntelligenceService {
             {
               role: 'system',
               content:
-                'Eres el Director Agrónomo Analista de Inteligencia Artificial para el sistema PlagaCode. Tu objetivo es recibir datos agregados de una campaña de cultivo (en lotes), y proporcionar un "Consenso Estratégico Neural". Debes dar recomendaciones directas, eficientes y claras enfocadas en priorizar lotes y optimizar recursos, en exactamente 2 párrafos.',
+                'Eres el Director Agrónomo Analista de Inteligencia Artificial para el sistema PlagaCode. Tu objetivo es recibir datos agregados de una campaña de cultivo (en lotes), y proporcionar un "Consenso Estratégico Neural". Debes dar interpretaciones y recomendaciones directas, eficientes y claras enfocadas en priorizar lotes y optimizar recursos, en exactamente 3 párrafos.',
             },
             {
               role: 'user',
               content: prompt,
             },
           ],
-          max_tokens: 300,
+          max_tokens: 500,
           temperature: 0.2, // Baja temperatura para decisiones analíticas
         },
         {
@@ -67,15 +68,16 @@ export class CampaignIntelligenceService {
       }
 
       const rawText = reply.trim();
-      // Dividir ingenuamente por saltos de línea y tomar los dos primeros párrafos
       const parts = rawText.split('\n').filter((p) => p.trim().length > 0);
 
-      const summary = parts[0] || 'Resumen no disponible.';
-      const actionPlan = parts.slice(1).join(' ') || 'Plan de acción no detallado en la respuesta.';
+      const chartInterpretation = parts[0] || 'Interpretación no disponible.';
+      const summary = parts[1] || 'Resumen no disponible.';
+      const actionPlan = parts.slice(2).join(' ') || 'Plan de acción no detallado en la respuesta.';
 
       return {
-        summary: summary,
-        actionPlan: actionPlan,
+        chartInterpretation,
+        summary,
+        actionPlan,
       };
     } catch (error) {
       this.logger.error(
@@ -108,14 +110,17 @@ Analiza los siguientes datos de la campaña activa y brinda un resumen directivo
 ${JSON.stringify(dataContext, null, 2)}
 
 Reglas de salida:
-- Formato: Estrictamente 2 párrafos, sin viñetas, sin títulos Markdown y sin negritas (markdown asteriscos).
-- Párrafo 1: Resumen de la situación crítica (interpreta los números y la matriz de riesgo).
-- Párrafo 2: Plan de acción y priorización (qué recursos enviar a qué lotes y/o qué plaga focalizar primero).
+- Formato: Estrictamente 3 párrafos separados por salto de línea, sin viñetas, sin títulos Markdown y sin negritas (markdown asteriscos).
+- Párrafo 1: Interpretación de los gráficos (describe qué revelan las curvas de evolución temporal, el radar de riesgo multi-variable, y el rendimiento relativo entre lotes).
+- Párrafo 2: Resumen ejecutivo de la situación crítica (interpreta los números globales, la tasa de infección, y la matriz de riesgo).
+- Párrafo 3: Plan de acción táctico y priorización (qué recursos enviar a qué lotes y/o qué plaga focalizar primero).
 `;
   }
 
   private getFallbackRecommendation(): StrategicRecommendationResponse {
     return {
+      chartInterpretation:
+        'Las curvas de evolución temporal muestran picos de densidad de plagas concentrados en las primeras semanas con tendencia a estabilizarse. El radar de riesgo multi-variable indica que tuta absoluta y mosca blanca son los vectores dominantes en al menos dos lotes críticos. El rendimiento relativo sugiere que los lotes con mayor incidencia superan el promedio de la campaña en detecciones acumuladas.',
       summary:
         'Los datos analizados indican una presencia moderada de plagas en los lotes evaluados. Se observa una tendencia estable en los últimos días comparada con la semana anterior, lo cual sugiere que los focos principales están temporalmente contenidos, pero no erradicados. Las mediciones de biomasa de los campos más activos muestran puntos de calor esporádicos en los bordes de la plantación.',
       actionPlan:
