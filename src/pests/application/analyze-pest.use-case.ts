@@ -165,14 +165,15 @@ export class AnalyzePestUseCase {
           );
         }
 
-        // Calcular isInfected, plaga principal y confianza máxima
         let isInfected = false;
         let primaryTargetPest: string | null = null;
         let maxConfidence: number | null = null;
+        let bugDensity = 0;
 
         for (const r of results) {
           if (r.verified && r.detections.length > 0) {
             isInfected = true;
+            bugDensity += r.detections.length;
             for (const det of r.detections) {
               if (maxConfidence === null || det.confidence > maxConfidence) {
                 maxConfidence = det.confidence;
@@ -198,6 +199,7 @@ export class AnalyzePestUseCase {
           isInfected,
           primaryTargetPest,
           maxConfidence,
+          bugDensity,
         });
         await manager.save(analysisLog);
 
