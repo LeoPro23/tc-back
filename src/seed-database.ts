@@ -16,7 +16,7 @@ import { AnalysisCommentOrmEntity } from './analysis-comments/infrastructure/ana
 dotenv.config();
 
 // ── CONFIGURACIÓN ─────────────────────────────────────────────
-const TARGET_USER_ID = '1282cd21-48aa-4708-8411-a26ca25132b1';
+const TARGET_USER_ID = 'e730f6df-a5d4-4ae4-9c00-b392509ec08f';
 const MAX_ANALYSES   = 100; // Límite total de registros de análisis
 
 // ── DataSource (standalone, misma config que database.module.ts) ─

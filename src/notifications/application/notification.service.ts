@@ -12,6 +12,8 @@ export class NotificationService {
         phoneCountry: string,
         phoneNumber: string,
         message: string,
+        pdfUrl?: string,
+        pdfFilename?: string,
     ): Promise<void> {
         const webhookUrl = process.env.WEBHOOK_URL;
 
@@ -20,10 +22,6 @@ export class NotificationService {
             return;
         }
 
-        // PASO 7.1.1 (NOTIFICACIONES - HIGIENE DE DATOS)
-        // El teléfono sacado de PostgreSQL viene tal cual lo ingresó el usuario. 
-        // Empleamos Regex `/\D/g` para destruir cualquier "+", letra o espacio de más,
-        // asegurando un formato numérico puro internacional para que la API de WhatsApp no lo rechace.
         const rawCountry = phoneCountry.replace(/\D/g, '');
         const rawNumber = phoneNumber.replace(/\D/g, '');
         const fullPhone = `${rawCountry}${rawNumber}`;
@@ -33,21 +31,22 @@ export class NotificationService {
             return;
         }
 
-        // PASO 7.1 (NOTIFICACIONES - COMPOSICIÓN DEL WEBHOOK)
-        // Se formatea el teléfono (ej. 51987654321) y el cuerpo del mensaje markdown
-        // para dárselo en bandeja de plata al Endpoint de WhatsApp (n8n o Evolution API).
-        const payload = {
+        const payload: Record<string, string> = {
             phone: fullPhone,
             message,
         };
 
+        if (pdfUrl) {
+            payload.pdfUrl = pdfUrl;
+        }
+        if (pdfFilename) {
+            payload.pdfFilename = pdfFilename;
+        }
+
         try {
-            this.logger.log(`Enviando notificación al teléfono: ${fullPhone} (N8N webhook)`);
-            // PASO 7.2 (NOTIFICACIONES - LANZAMIENTO ASÍNCRONO SIN BLOQUEO)
-            // Disparamos la petición POST. Nota que se maneja asincrónicamente y se captura
-            // silenciosamente cualquier caída (catchError). 
-            // Si WhatsApp se cae, la API de todas formas devolverá 200 OK al frontend 
-            // para que el agricultor vea sus resultados sin interrupciones.
+            this.logger.log(
+                `Enviando notificación al teléfono: ${fullPhone} (N8N webhook)${pdfUrl ? ' + PDF: ' + pdfUrl : ''}`,
+            );
             await firstValueFrom(
                 this.httpService.post(webhookUrl, payload).pipe(
                     catchError((error) => {

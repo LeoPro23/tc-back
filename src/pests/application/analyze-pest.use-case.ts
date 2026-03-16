@@ -10,6 +10,7 @@ import { ImageVerificationService } from './image-verification.service';
 import { AnalysisInterpretationService } from './analysis-interpretation.service';
 import { MinioService } from '../../storage/infrastructure/minio.service';
 import { NotificationService } from '../../notifications/application/notification.service';
+import { PdfReportService, PdfReportData } from '../../reports/application/pdf-report.service';
 import { EntityManager } from 'typeorm';
 import { CampaignOrmEntity } from '../../campaigns/infrastructure/campaign.orm-entity';
 import { FieldOrmEntity } from '../../fields/infrastructure/field.orm-entity';
@@ -32,6 +33,7 @@ export class AnalyzePestUseCase {
     private readonly minioService: MinioService,
     private readonly entityManager: EntityManager,
     private readonly notificationService: NotificationService,
+    private readonly pdfReportService: PdfReportService,
   ) { }
 
   async execute(
@@ -275,35 +277,15 @@ export class AnalyzePestUseCase {
         `Análisis guardado exitosamente: ${results.length} imgs para user ${userId}`,
       );
 
-      // PASO 7 FINAL ASÍNCRONO (DISPARADOR WHATSAPP)
-      // Como el proceso transaccional terminó bien, la data ya es nuestra. Sin interrumpir
-      // la respuesta rápida al Frontend, levantamos una tarea Async para enviar el Whatsapp vía n8n.
       if (createdAnalysisId) {
-        try {
-          // PASO 7.1 (ORIGEN NÚMERO CELULAR): Re-hidratación del Usuario
-          // Como el JWT original (Paso 3.1) solo traía el ID por seguridad y ligereza,
-          // hacemos una consulta SQL SELECT fresca a la tabla de Usuarios (`UserOrmEntity`)
-          // para asegurarnos de tener el `phoneCountry` y `phoneNumber` más actualizados del agricultor.
-          const fullUser = await this.entityManager.findOne(UserOrmEntity, { where: { id: userId } });
-          if (fullUser && fullUser.phoneCountry && fullUser.phoneNumber) {
-            const fieldRecord = await this.entityManager.findOne(FieldCampaignOrmEntity, {
-              where: { id: fieldCampaignId }, relations: ['field']
-            });
-            const frontUrl = process.env.ORIGIN_URL || 'http://localhost:3000';
-
-            let msg = `🔬 *PlagaCode AI Analysis*\nLote Analizado: ${fieldRecord?.field?.name || 'Desconocido'}\n\n`;
-            msg += `*Resumen General:*\n${interpretation.generalSummary}\n\n`;
-            msg += `*Puedes ver más detalles en:*\n${frontUrl}/scan-history/${createdAnalysisId}`;
-
-            this.notificationService.notifyWhatsapp(
-              fullUser.phoneCountry,
-              fullUser.phoneNumber,
-              msg
-            ).catch((err) => this.logger.error("Async Whatsapp error", err.message));
-          }
-        } catch (err) {
-          this.logger.error("Error disparando Webhook Wazend post-guardado", err);
-        }
+        this.sendWhatsappWithPdf(
+          createdAnalysisId,
+          userId,
+          fieldCampaignId,
+          interpretation,
+          results,
+          agronomicContext,
+        ).catch((err) => this.logger.error('Error en notificación post-guardado', err));
       }
 
     } catch (dbErr) {
@@ -314,5 +296,122 @@ export class AnalyzePestUseCase {
     }
 
     return { analysisId: createdAnalysisId, results, interpretation };
+  }
+
+  private async sendWhatsappWithPdf(
+    analysisId: string,
+    userId: string,
+    fieldCampaignId: string,
+    interpretation: BatchInterpretation,
+    results: PestAnalysisResult[],
+    agronomicContext?: {
+      phenologicalState: string | null;
+      soilQuality: string | null;
+      currentClimate: string | null;
+    },
+  ): Promise<void> {
+    const fullUser = await this.entityManager.findOne(UserOrmEntity, { where: { id: userId } });
+    if (!fullUser || !fullUser.phoneCountry || !fullUser.phoneNumber) return;
+
+    const fieldRecord = await this.entityManager.findOne(FieldCampaignOrmEntity, {
+      where: { id: fieldCampaignId },
+      relations: ['field'],
+    });
+    const frontUrl = process.env.ORIGIN_URL || 'http://localhost:3000';
+    const fieldName = fieldRecord?.field?.name || 'Desconocido';
+
+    let msg = `🔬 *PlagaCode AI Analysis*\nLote Analizado: ${fieldName}\n\n`;
+    msg += `*Resumen General:*\n${interpretation.generalSummary}\n\n`;
+    msg += `*Recomendación:*\n${interpretation.generalRecommendation}\n\n`;
+    msg += `*Producto:* ${interpretation.generalProduct}\n`;
+    msg += `*Protocolo Bioseguridad:* ${interpretation.generalBiosecurityProtocol}\n\n`;
+    msg += `*Puedes ver más detalles en:*\n${frontUrl}/scan-history/${analysisId}`;
+
+    let pdfUrl: string | undefined;
+    let pdfFilename: string | undefined;
+
+    try {
+      let isInfected = false;
+      let primaryTargetPest: string | null = null;
+      let maxConfidence: number | null = null;
+      let bugDensity = 0;
+
+      const imageData: PdfReportData['images'] = [];
+
+      for (const r of results) {
+        if (r.verified && r.detections.length > 0) {
+          isInfected = true;
+          bugDensity += r.detections.length;
+          for (const det of r.detections) {
+            if (maxConfidence === null || det.confidence > maxConfidence) {
+              maxConfidence = det.confidence;
+              primaryTargetPest = det.className;
+            }
+          }
+        }
+
+        const perImage = interpretation.perImage.find(
+          (p) => p.filename.toLowerCase() === r.filename.toLowerCase(),
+        );
+
+        imageData.push({
+          filename: r.filename,
+          detections: r.detections.map((d) => ({
+            pest: d.className,
+            confidence: d.confidence,
+            model: d.model || 'yolov8',
+          })),
+          imageRecommendation: perImage?.imageRecommendation || null,
+          recommendedProduct: perImage?.recipe?.product || null,
+          biosecurityProtocol: perImage?.biosecurityProtocol || null,
+        });
+      }
+
+      const reportData: PdfReportData = {
+        reportId: analysisId.split('-')[0].toUpperCase(),
+        date: new Date().toLocaleDateString('es-ES', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        }),
+        operatorName: fullUser.name || 'Operador',
+        operatorEmail: fullUser.email,
+        fieldName,
+        isInfected,
+        primaryTargetPest,
+        maxConfidence,
+        bugDensity,
+        generalSummary: interpretation.generalSummary,
+        generalRecommendation: interpretation.generalRecommendation,
+        recommendedProduct: interpretation.generalProduct,
+        operativeGuide: interpretation.generalOperativeGuide,
+        biosecurityProtocol: interpretation.generalBiosecurityProtocol,
+        phenologicalState: agronomicContext?.phenologicalState || null,
+        soilQuality: agronomicContext?.soilQuality || null,
+        currentClimate: agronomicContext?.currentClimate || null,
+        images: imageData,
+      };
+
+      const pdfBuffer = await this.pdfReportService.generateReport(reportData);
+      pdfFilename = `Reporte-PlagaCode-${fieldName.replace(/\s+/g, '-')}-${Date.now()}.pdf`;
+
+      const uploaded = await this.minioService.uploadImage(
+        pdfBuffer,
+        pdfFilename,
+        'application/pdf',
+      );
+      pdfUrl = uploaded.url;
+      this.logger.log(`PDF generado y subido: ${pdfUrl}`);
+    } catch (pdfErr) {
+      this.logger.error('Error generando/subiendo PDF para WhatsApp', pdfErr);
+    }
+
+    await this.notificationService.notifyWhatsapp(
+      fullUser.phoneCountry,
+      fullUser.phoneNumber,
+      msg,
+      pdfUrl,
+      pdfFilename,
+    );
   }
 }

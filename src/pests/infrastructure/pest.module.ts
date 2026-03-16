@@ -8,9 +8,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { FastApiPestRepositoryImpl } from './fastapi-pest.repository.impl';
 import { IPestRepository } from '../domain/pest.repository.interface';
 import { NotificationModule } from '../../notifications/infrastructure/notification.module';
+import { ReportsModule } from '../../reports/infrastructure/reports.module';
 
 @Module({
-  imports: [StorageModule, TypeOrmModule.forFeature([]), NotificationModule],
+  imports: [StorageModule, TypeOrmModule.forFeature([]), NotificationModule, ReportsModule],
   controllers: [PestController],
   providers: [
     AnalyzePestUseCase,
