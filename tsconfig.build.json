@@ -1,18 +1,4 @@
 {
   "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "rootDir": "src"
-  },
-  "exclude": [
-    "node_modules",
-    "test",
-    "dist",
-    "**/*spec.ts",
-    "find-user.ts",
-    "measure-llm.ts",
-    "test-500.ts",
-    "test-db.ts",
-    "test-query.ts",
-    "test-typeorm.ts"
-  ]
+  "exclude": ["node_modules", "test", "dist", "**/*spec.ts"]
 }

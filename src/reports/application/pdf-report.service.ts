@@ -64,7 +64,7 @@ export class PdfReportService {
         });
     }
 
-    private buildDocument(doc: PDFKit.PDFDocument, data: PdfReportData): void {
+    private buildDocument(doc: any, data: PdfReportData): void {
         const green = '#00994D';
         const red = '#CC0033';
         const dark = '#1a1a1a';
@@ -247,7 +247,7 @@ export class PdfReportService {
     }
 
     private drawSectionTitle(
-        doc: PDFKit.PDFDocument,
+        doc: any,
         title: string,
         y: number,
         color: string,
@@ -258,7 +258,7 @@ export class PdfReportService {
     }
 
     private drawKeyValue(
-        doc: PDFKit.PDFDocument,
+        doc: any,
         y: number,
         key: string,
         value: string,
@@ -278,7 +278,7 @@ export class PdfReportService {
     }
 
     private drawWrappedText(
-        doc: PDFKit.PDFDocument,
+        doc: any,
         y: number,
         text: string,
     ): number {
@@ -289,7 +289,7 @@ export class PdfReportService {
     }
 
     private drawMetricsRow(
-        doc: PDFKit.PDFDocument,
+        doc: any,
         y: number,
         metrics: Array<{ label: string; value: string; color: string }>,
     ): number {
@@ -311,7 +311,7 @@ export class PdfReportService {
         return y + 55;
     }
 
-    private checkPageBreak(doc: PDFKit.PDFDocument, y: number, needed: number): number {
+    private checkPageBreak(doc: any, y: number, needed: number): number {
         if (y + needed > doc.page.height - 60) {
             doc.addPage();
             return 50;
