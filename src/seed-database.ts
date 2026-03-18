@@ -68,9 +68,10 @@ const PRODUCTS = [
 ];
 
 // Nombres reales de los archivos .pt en ml-service/models/
+// modelo_plagas_v1 → YOLOv8 Nano (best), modelo_plagas_v2 → YOLOv8 Medium (best), yolo26n → modelo legacy
 const YOLO_MODEL_NAMES = [
+  'yolov8n_v1_best',
   'yolov8m_v2_best',
-  'yolov8m_v2_last',
   'yolo26n',
 ];
 
@@ -299,19 +300,18 @@ async function seed() {
           // diagnosis = className (etiqueta cruda: tuta_absoluta, minador, mosca_blanca)
           // boundingBox = [x1, y1, x2, y2] (array plano de 4 coordenadas)
           for (const model of modelsInDb) {
-            const isOldModel = model.name.includes('yolo26');
-            const isLastModel = model.name.includes('last');
+            const isNanoModel = model.name.includes('v8n');
+            const isLegacyModel = model.name.includes('yolo26');
 
             // Número de detecciones que este modelo encontraría
             const detections = infected ? randInt(1, Math.min(bugDensity, 5)) : 0;
 
             for (let d = 0; d < detections; d++) {
-              // Simular diferencias de precisión entre modelos
               let confidence: number;
               const base = randFloat(0.72, 0.97);
-              if (isOldModel) confidence = Math.max(0.3, base - randFloat(0.1, 0.2));
-              else if (isLastModel) confidence = Math.max(0.4, base - randFloat(0.02, 0.08));
-              else confidence = base; // best = mejor
+              if (isLegacyModel) confidence = Math.max(0.3, base - randFloat(0.1, 0.2));
+              else if (isNanoModel) confidence = Math.max(0.45, base - randFloat(0.03, 0.10));
+              else confidence = base;
 
               // Plaga detectada = la misma que primaryTargetPest del análisis padre
               const detectedPest = activePest!;
