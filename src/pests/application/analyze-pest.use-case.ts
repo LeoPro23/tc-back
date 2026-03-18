@@ -285,6 +285,7 @@ export class AnalyzePestUseCase {
           interpretation,
           results,
           agronomicContext,
+          validImagesForMinio,
         ).catch((err) => this.logger.error('Error en notificación post-guardado', err));
       }
 
@@ -309,6 +310,11 @@ export class AnalyzePestUseCase {
       soilQuality: string | null;
       currentClimate: string | null;
     },
+    validImagesForMinio?: Array<{
+      buffer: Buffer;
+      filename: string;
+      mimeType: string;
+    }>,
   ): Promise<void> {
     const fullUser = await this.entityManager.findOne(UserOrmEntity, { where: { id: userId } });
     if (!fullUser || !fullUser.phoneCountry || !fullUser.phoneNumber) return;
@@ -354,12 +360,18 @@ export class AnalyzePestUseCase {
           (p) => p.filename.toLowerCase() === r.filename.toLowerCase(),
         );
 
+        const minioImage = validImagesForMinio?.find(
+          (m) => m.filename.toLowerCase() === r.filename.toLowerCase()
+        );
+
         imageData.push({
           filename: r.filename,
+          buffer: minioImage?.buffer,
           detections: r.detections.map((d) => ({
             pest: d.className,
             confidence: d.confidence,
             model: d.model || 'yolov8',
+            box: d.box,
           })),
           imageRecommendation: perImage?.imageRecommendation || null,
           recommendedProduct: perImage?.recipe?.product || null,
