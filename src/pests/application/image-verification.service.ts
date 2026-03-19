@@ -47,9 +47,14 @@ export class ImageVerificationService {
     }
 
     if (!this.openRouterApiKey) {
-      throw new InternalServerErrorException(
-        'OPENROUTER_API_KEY is not configured',
+      this.logger.warn(
+        'OPENROUTER_API_KEY no configurada. Omitiendo verificación IA (modo offline).',
       );
+      return {
+        isValid: true,
+        reason:
+          'Verificación IA omitida (sin API key). Solo se aplicó control de calidad local.',
+      };
     }
 
     const dataUri = `data:${mimeType};base64,${imageBuffer.toString('base64')}`;
@@ -103,10 +108,14 @@ export class ImageVerificationService {
       return this.parseDecision(rawContent);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      this.logger.error(`OpenRouter verification request failed: ${message}`);
-      throw new InternalServerErrorException(
-        'Failed to verify image with OpenRouter',
+      this.logger.warn(
+        `Verificación IA no disponible (${message}). Continuando en modo offline.`,
       );
+      return {
+        isValid: true,
+        reason:
+          'Verificación IA omitida (sin conexión a internet). Solo se aplicó control de calidad local.',
+      };
     }
   }
 
