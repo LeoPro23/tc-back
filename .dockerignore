@@ -1,4 +1,4 @@
 node_modules
 dist
 .env
-ml-service
+ml-service/__pycache__
