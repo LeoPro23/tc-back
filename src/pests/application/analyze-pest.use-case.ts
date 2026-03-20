@@ -299,6 +299,42 @@ export class AnalyzePestUseCase {
     return { analysisId: createdAnalysisId, results, interpretation };
   }
 
+  private buildFindingsByModel(
+    results: PestAnalysisResult[],
+  ): Array<{ model: string; summary: string }> {
+    const modelMap = new Map<string, { pest: string; confidenceSum: number; count: number }[]>();
+
+    for (const r of results) {
+      if (!r.verified) continue;
+      for (const det of r.detections) {
+        const modelName = det.model || 'yolov8_default';
+        if (!modelMap.has(modelName)) modelMap.set(modelName, []);
+        const entries = modelMap.get(modelName)!;
+        const existing = entries.find((e) => e.pest === det.className);
+        if (existing) {
+          existing.confidenceSum += det.confidence <= 1 ? det.confidence * 100 : det.confidence;
+          existing.count += 1;
+        } else {
+          entries.push({
+            pest: det.className,
+            confidenceSum: det.confidence <= 1 ? det.confidence * 100 : det.confidence,
+            count: 1,
+          });
+        }
+      }
+    }
+
+    const output: Array<{ model: string; summary: string }> = [];
+    for (const [model, pests] of modelMap) {
+      const parts = pests.map(
+        (p) =>
+          `${p.count} ${p.count === 1 ? 'entidad' : 'entidades'} de _${p.pest}_ (${Math.round(p.confidenceSum / p.count)}% precisión)`,
+      );
+      output.push({ model, summary: parts.join(', ') });
+    }
+    return output;
+  }
+
   private async sendWhatsappWithPdf(
     analysisId: string,
     userId: string,
@@ -331,6 +367,16 @@ export class AnalyzePestUseCase {
     msg += `*Recomendación:*\n${interpretation.generalRecommendation}\n\n`;
     msg += `*Producto:* ${interpretation.generalProduct}\n`;
     msg += `*Protocolo Bioseguridad:* ${interpretation.generalBiosecurityProtocol}\n\n`;
+
+    const findingsByModel = this.buildFindingsByModel(results);
+    if (findingsByModel.length > 0) {
+      msg += `*Desglose de hallazgos por modelo:*\n`;
+      for (const entry of findingsByModel) {
+        msg += `• *${entry.model}:* ${entry.summary}\n`;
+      }
+      msg += `\n`;
+    }
+
     msg += `*Puedes ver más detalles en:*\n${frontUrl}/scan-history/${analysisId}`;
 
     let pdfUrl: string | undefined;
