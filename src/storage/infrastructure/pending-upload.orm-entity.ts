@@ -22,7 +22,7 @@ export class PendingUploadOrmEntity {
   @Column({ default: false })
   synced: boolean;
 
-  @Column({ name: 'minio_url', nullable: true })
+  @Column({ name: 'minio_url', type: 'varchar', nullable: true })
   minioUrl: string | null;
 
   @CreateDateColumn({ name: 'created_at' })
